@@ -1,0 +1,21 @@
+# Godot 4+ specific ignores
+.godot/
+*.translation
+
+# Imported assets cache
+.import/
+
+# Exports
+/build/
+/export/
+export.cfg
+export_presets.cfg
+
+# System / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+*.swp
+.vscode/
+.idea/
