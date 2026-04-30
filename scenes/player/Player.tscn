@@ -69,8 +69,6 @@ script = ExtResource("10_180ig")
 
 [node name="Idle" type="Node" parent="ActionStateMachine" unique_id=1778274176]
 script = ExtResource("11_20koh")
-metadata/_custom_type_script = "uid://bii7xt6jbu4mi"
 
 [node name="Attack" type="Node" parent="ActionStateMachine" unique_id=344726428]
 script = ExtResource("12_ov1oi")
-metadata/_custom_type_script = "uid://bii7xt6jbu4mi"
