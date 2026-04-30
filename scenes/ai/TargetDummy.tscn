@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ai/target_dummy.gd" id="1_td"]
+[ext_resource type="Script" path="res://scripts/combat/hurtbox.gd" id="2_hb"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
+radius = 0.35
+height = 1.8
+
+[node name="TargetDummy" type="StaticBody3D"]
+script = ExtResource("1_td")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_1")
+
+[node name="Hurtbox" type="Area3D" parent="."]
+script = ExtResource("2_hb")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+position = Vector3(0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_1")

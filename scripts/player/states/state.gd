@@ -1,0 +1,24 @@
+class_name PlayerState
+extends Node
+
+var player: CharacterBody3D
+var state_machine: Node  # PlayerStateMachine, typed as Node to avoid circular ref
+
+func enter() -> void: pass
+func exit() -> void: pass
+func physics_update(_delta: float) -> void: pass
+func handle_input(_event: InputEvent) -> void: pass
+
+# ── Shared helpers ────────────────────────────────────────────────────────────
+
+func _apply_gravity(delta: float) -> void:
+	if not player.is_on_floor():
+		player.velocity.y -= player.gravity * delta
+
+func _get_move_dir() -> Vector3:
+	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	return (player.transform.basis * Vector3(input.x, 0.0, input.y)).normalized()
+
+func _decelerate(delta: float) -> void:
+	player.velocity.x = move_toward(player.velocity.x, 0.0, 10.0 * delta)
+	player.velocity.z = move_toward(player.velocity.z, 0.0, 10.0 * delta)

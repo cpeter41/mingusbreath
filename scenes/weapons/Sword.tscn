@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/sword.gd" id="1_sw"]
+[ext_resource type="Script" path="res://scripts/combat/hitbox.gd" id="2_hb"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(0.05, 0.6, 0.05)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(0.15, 0.55, 0.15)
+
+[node name="Sword" type="Node3D"]
+script = ExtResource("1_sw")
+
+[node name="Blade" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.3, 0)
+mesh = SubResource("BoxMesh_1")
+
+[node name="Hitbox" type="Area3D" parent="."]
+script = ExtResource("2_hb")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hitbox"]
+position = Vector3(0, 0.3, 0)
+shape = SubResource("BoxShape3D_1")

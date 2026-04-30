@@ -56,12 +56,15 @@ mingusbreath/
 │   ├── ui/                  # screens, HUD, menus
 │   └── util/                # math, pooling, signals helpers
 ├── scenes/                  # .tscn files mirroring scripts/ layout
+│   └── dev/                 # throwaway dev sandboxes (not shipped)
 ├── shaders/                 # water, foliage wind, toon
 ├── assets/                  # models, textures, sfx, music
 └── tests/                   # GUT tests (optional, recommended for save+gen)
 ```
 
 Mirroring `scripts/` and `scenes/` keeps file navigation predictable.
+
+`scenes/dev/` holds throwaway sandboxes used during development (e.g. `test_island.tscn`). `main.tscn` redirects to the current dev scene until a real spawn flow exists; revert before shipping.
 
 ---
 
@@ -117,11 +120,13 @@ Rule: autoloads never reach into scenes; scenes call autoloads or emit on EventB
 
 - **Controller**: `CharacterBody3D` + `SpringArm3D` third-person camera. Stylized low-poly — toon shader on character, rim light optional.
 - **State machine** (`scripts/player/states/`): Idle, Run, Sprint, Jump, Fall, Swim, Block, Attack, Dodge, Sail (when mounted on a boat). One state at a time; transitions are explicit.
+  *Phase note: phases ship state subsets. `scripts/player/states/` is grown incrementally. Phase 2 implements Idle, Run, Sprint, Jump, Fall, Attack only.*
 - **Stats**: HP, Stamina, Hunger (Valheim-ish food buffs). Stamina drains on sprint/jump/attack/block-hit.
 - **Melee**: Each weapon scene has an `Area3D` hitbox (per your call). Animation track toggles `monitoring` on/off during the active frames of the swing. Hits emit `EventBus.damage_dealt` carrying attacker, target, weapon, skill_id.
 - **Ranged**: Bow draws a charge → spawns an arrow `RigidBody3D` (or raycast for fast/cheap arrows) with damage payload. Drawing costs stamina, charge level scales damage.
 - **Block**: While blocking, incoming damage is reduced by block-skill multiplier and consumes stamina. Parry window if block is timed.
 - **Damage flow**: `Hurtbox` (Area3D on enemy/player) receives signal from hitbox, asks `CombatResolver` for final damage given resistances + skill multipliers, applies it, emits death event if HP ≤ 0.
+- **CombatResolver contract**: `static resolve(attacker: Node, target: Node, weapon_id: StringName, base_damage: float) -> float` — returns final damage after skill multipliers and resistances. Phase 2 implementation returns `base_damage` directly; multipliers land with the full skill system.
 
 **Critical scripts:**
 - `scripts/player/player.gd`, `player_camera.gd`, `states/*.gd`
