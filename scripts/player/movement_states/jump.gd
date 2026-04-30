@@ -1,4 +1,4 @@
-extends PlayerState
+extends MovementState
 
 const SPEED         := 5.0
 const JUMP_VELOCITY := 4.5
@@ -16,4 +16,4 @@ func physics_update(delta: float) -> void:
 		player.velocity.z = dir.z * SPEED
 
 	if player.velocity.y <= 0.0:
-		state_machine.transition_to("fall")
+		movementSM.transition_to("fall")

@@ -4,10 +4,12 @@ const MOUSE_SENSITIVITY := 0.003
 
 var hp: float      = 100.0
 var stamina: float = 100.0
+@export var speed: float = 5.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 @onready var camera_pivot: Node3D = $CameraPivot
-@onready var state_machine: Node  = $StateMachine
+@onready var movementSM: Node = $MovementStateMachine
+@onready var actionSM: Node = $ActionStateMachine
 
 
 func _ready() -> void:
@@ -29,9 +31,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			camera_pivot.rotation.x, deg_to_rad(-70.0), deg_to_rad(20.0)
 		)
 
-	state_machine.handle_input(event)
+	movementSM.handle_input(event)
+	actionSM.handle_input(event)
 
 
 func _physics_process(delta: float) -> void:
-	state_machine.physics_update(delta)
+	movementSM.physics_update(delta)
+	actionSM.physics_update(delta)
 	move_and_slide()

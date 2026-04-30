@@ -1,15 +1,17 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene format=3 uid="uid://co1cgbo6s2lmu"]
 
-[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_plyr"]
-[ext_resource type="Script" path="res://scripts/player/player_camera.gd" id="2_pcam"]
-[ext_resource type="Script" path="res://scripts/player/state_machine.gd" id="3_sm"]
-[ext_resource type="Script" path="res://scripts/player/states/idle.gd" id="4_idle"]
-[ext_resource type="Script" path="res://scripts/player/states/run.gd" id="5_run"]
-[ext_resource type="Script" path="res://scripts/player/states/sprint.gd" id="6_sprint"]
-[ext_resource type="Script" path="res://scripts/player/states/jump.gd" id="7_jump"]
-[ext_resource type="Script" path="res://scripts/player/states/fall.gd" id="8_fall"]
-[ext_resource type="Script" path="res://scripts/player/states/attack.gd" id="9_atk"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/Sword.tscn" id="10_sword"]
+[ext_resource type="Script" uid="uid://dmg1tbn2oloma" path="res://scripts/player/player.gd" id="1_plyr"]
+[ext_resource type="Script" uid="uid://jd1ouo00vbp2" path="res://scripts/player/player_camera.gd" id="2_pcam"]
+[ext_resource type="Script" uid="uid://b4jbu3cpkr1gn" path="res://scripts/player/movementSM.gd" id="3_sm"]
+[ext_resource type="Script" uid="uid://blm12rjr7ckf7" path="res://scripts/player/movement_states/idle.gd" id="4_idle"]
+[ext_resource type="Script" uid="uid://uhs8865n85fc" path="res://scripts/player/movement_states/run.gd" id="5_run"]
+[ext_resource type="Script" uid="uid://jl6bmgysx3sm" path="res://scripts/player/movement_states/sprint.gd" id="6_sprint"]
+[ext_resource type="Script" uid="uid://tyhr0nfre37n" path="res://scripts/player/movement_states/jump.gd" id="7_jump"]
+[ext_resource type="Script" uid="uid://bd2fxngxunliv" path="res://scripts/player/movement_states/fall.gd" id="8_fall"]
+[ext_resource type="Script" uid="uid://ctshxxwb1ito4" path="res://scripts/player/actionSM.gd" id="10_180ig"]
+[ext_resource type="PackedScene" uid="uid://dd6deav3yfni3" path="res://scenes/weapons/Sword.tscn" id="10_sword"]
+[ext_resource type="Script" uid="uid://be2yccai2wdfa" path="res://scripts/player/action_states/idle.gd" id="11_20koh"]
+[ext_resource type="Script" uid="uid://cmcuef4yexe0h" path="res://scripts/player/action_states/attack.gd" id="12_ov1oi"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
@@ -19,48 +21,56 @@ height = 1.8
 radius = 0.4
 height = 1.8
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="CharacterBody3D" unique_id=576338234]
 script = ExtResource("1_plyr")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-position = Vector3(0, 0.9, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1998205765]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_1")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.9, 0)
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1725943389]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("CapsuleMesh_1")
 
-[node name="CameraPivot" type="Node3D" parent="."]
-position = Vector3(0, 1.5, 0)
+[node name="CameraPivot" type="Node3D" parent="." unique_id=475442067]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 
-[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot" unique_id=235728209]
 spring_length = 4.0
 script = ExtResource("2_pcam")
 
-[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D"]
+[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D" unique_id=1823044835]
 
-[node name="WeaponMount" type="Node3D" parent="."]
-position = Vector3(0.4, 1.2, -0.5)
+[node name="WeaponMount" type="Node3D" parent="." unique_id=716419572]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.2, -0.5)
 
-[node name="Sword" parent="WeaponMount" instance=ExtResource("10_sword")]
+[node name="Sword" parent="WeaponMount" unique_id=1457676848 instance=ExtResource("10_sword")]
 
-[node name="StateMachine" type="Node" parent="."]
+[node name="MovementStateMachine" type="Node" parent="." unique_id=1801636306]
 script = ExtResource("3_sm")
 
-[node name="Idle" type="Node" parent="StateMachine"]
+[node name="Idle" type="Node" parent="MovementStateMachine" unique_id=1385347734]
 script = ExtResource("4_idle")
 
-[node name="Run" type="Node" parent="StateMachine"]
+[node name="Run" type="Node" parent="MovementStateMachine" unique_id=842835857]
 script = ExtResource("5_run")
 
-[node name="Sprint" type="Node" parent="StateMachine"]
+[node name="Sprint" type="Node" parent="MovementStateMachine" unique_id=41312206]
 script = ExtResource("6_sprint")
 
-[node name="Jump" type="Node" parent="StateMachine"]
+[node name="Jump" type="Node" parent="MovementStateMachine" unique_id=1560364722]
 script = ExtResource("7_jump")
 
-[node name="Fall" type="Node" parent="StateMachine"]
+[node name="Fall" type="Node" parent="MovementStateMachine" unique_id=274319939]
 script = ExtResource("8_fall")
 
-[node name="Attack" type="Node" parent="StateMachine"]
-script = ExtResource("9_atk")
+[node name="ActionStateMachine" type="Node" parent="." unique_id=1403715199]
+script = ExtResource("10_180ig")
+
+[node name="Idle" type="Node" parent="ActionStateMachine" unique_id=1778274176]
+script = ExtResource("11_20koh")
+metadata/_custom_type_script = "uid://bii7xt6jbu4mi"
+
+[node name="Attack" type="Node" parent="ActionStateMachine" unique_id=344726428]
+script = ExtResource("12_ov1oi")
+metadata/_custom_type_script = "uid://bii7xt6jbu4mi"

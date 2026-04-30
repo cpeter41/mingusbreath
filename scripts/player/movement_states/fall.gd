@@ -1,4 +1,4 @@
-extends PlayerState
+extends MovementState
 
 const SPEED := 5.0
 
@@ -11,7 +11,7 @@ func physics_update(delta: float) -> void:
 		player.velocity.z = dir.z * SPEED
 
 	if player.is_on_floor():
-		state_machine.transition_to(
+		movementSM.transition_to(
 			"sprint" if Input.is_action_pressed("sprint") and _get_move_dir() != Vector3.ZERO
 			else "run" if _get_move_dir() != Vector3.ZERO
 			else "idle"

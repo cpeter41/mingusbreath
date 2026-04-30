@@ -1,8 +1,10 @@
-class_name PlayerState
+class_name MovementState
 extends Node
 
+const DECELERATION_MOD := 10.0
+
 var player: CharacterBody3D
-var state_machine: Node  # PlayerStateMachine, typed as Node to avoid circular ref
+var movementSM: Node  # PlayerStateMachine, typed as Node to avoid circular ref
 
 func enter() -> void: pass
 func exit() -> void: pass
@@ -20,5 +22,5 @@ func _get_move_dir() -> Vector3:
 	return (player.transform.basis * Vector3(input.x, 0.0, input.y)).normalized()
 
 func _decelerate(delta: float) -> void:
-	player.velocity.x = move_toward(player.velocity.x, 0.0, 10.0 * delta)
-	player.velocity.z = move_toward(player.velocity.z, 0.0, 10.0 * delta)
+	player.velocity.x = move_toward(player.velocity.x, 0.0, DECELERATION_MOD * delta)
+	player.velocity.z = move_toward(player.velocity.z, 0.0, DECELERATION_MOD * delta)
