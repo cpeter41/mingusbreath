@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="SkillDef" format=3 uid="uid://bayhjbtbsbqq1"]
+
+[ext_resource type="Script" uid="uid://cuo0hhxgcd84i" path="res://scripts/data/skill_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"swords"
+display_name = "Swords"

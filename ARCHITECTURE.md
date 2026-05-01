@@ -121,6 +121,8 @@ Rule: autoloads never reach into scenes; scenes call autoloads or emit on EventB
 - **Controller**: `CharacterBody3D` + `SpringArm3D` third-person camera. Stylized low-poly — toon shader on character, rim light optional.
 - **State machine** (`scripts/player/states/`): Idle, Run, Sprint, Jump, Fall, Swim, Block, Attack, Dodge, Sail (when mounted on a boat). One state at a time; transitions are explicit.
   *Phase note: phases ship state subsets. `scripts/player/states/` is grown incrementally. Phase 2 implements Idle, Run, Sprint, Jump, Fall, Attack only.*
+  *Phase 2 split this into two parallel state machines — movementSM (locomotion) and actionSM (attack/block/dodge) — running independently. Kept because it cleanly separates concerns.*
+  *Phase 3 implements a minimal Sail action state: blocks all other action input, drives boat instead of player. Player capsule hidden during Sail. Movement SM frozen (Idle).*
 - **Stats**: HP, Stamina, Hunger (Valheim-ish food buffs). Stamina drains on sprint/jump/attack/block-hit.
 - **Melee**: Each weapon scene has an `Area3D` hitbox (per your call). Animation track toggles `monitoring` on/off during the active frames of the swing. Hits emit `EventBus.damage_dealt` carrying attacker, target, weapon, skill_id.
 - **Ranged**: Bow draws a charge → spawns an arrow `RigidBody3D` (or raycast for fast/cheap arrows) with damage payload. Drawing costs stamina, charge level scales damage.
@@ -140,7 +142,7 @@ Pure use-based, no XP loss on death. Skills:
 
 > Swords, Axes, Clubs, Polearms, Knives, Bows, Unarmed, Block, Sneak, Run, Jump, Swim, Sail, Woodcutting, Mining, Cooking, Fishing
 
-- Each skill is a `SkillDef` resource: id, display name, xp curve (array of thresholds or formula), per-level effect (damage mult, stamina mult, gather speed mult, etc.).
+- Each skill is a `SkillDef` resource with pinned fields: `id: StringName`, `display_name: String`, `xp_curve: PackedFloat32Array` (cumulative XP-to-next thresholds), `per_level_damage_mult: float = 1.0`, `per_level_stamina_mult: float = 1.0`. Phase 3 uses `id`, `display_name`, and `xp_curve`; multipliers are reserved fields not yet applied.
 - `SkillManager` holds `{skill_id: {level: int, xp: float}}`.
 - Hooks: combat resolver calls `SkillManager.add_xp(weapon_skill, amount)`; movement controller adds Run/Jump/Swim XP over time spent in those states; gathering tools add Woodcutting/Mining; cooking station awards Cooking; etc.
 - Level-up → `EventBus.skill_leveled` → HUD toast + audio sting.
@@ -159,7 +161,20 @@ Pure use-based, no XP loss on death. Skills:
 
 ---
 
+## Inventory
+
+- `InventoryRegistry` scans `data/items/*.tres` at startup and indexes by id.
+- `ItemDef` pinned fields: `id: StringName`, `display_name: String`, `description: String`, `icon: Texture2D`, `max_stack: int = 99`, `item_type: enum { GENERIC, MATERIAL, WEAPON, TOOL, CONSUMABLE }`, `weapon_skill_id: StringName = &""` (weapons only).
+- Inventory persists as a flat array of `{item_id, count}` stacks; `ItemDef` refs are resolved on load via `InventoryRegistry`, never serialized.
+- Cap: 20 slots, stack size 99. `add(item_id, count)` fills existing stacks first, then opens new slots. Returns leftover count if full.
+
+**Critical scripts:** `scripts/inventory/inventory.gd`, `scripts/items/item_pickup.gd`.
+
+---
+
 ## Boats & Naval Combat
+
+*Phase 3 ships a stub `CharacterBody3D` boat pinned to a flat water plane — no buoyancy, no waves, no naval combat. Rewritten to `RigidBody3D` + buoyancy in Phase 8 when the ocean shader lands.*
 
 - **Boat scene**: `RigidBody3D` with a custom buoyancy script sampling water height (matches the ocean shader's wave function) at a few hull points. Arcade steering — throttle + rudder, no wind.
 - **Mounting**: interact prompt while near boat → camera attaches to boat-relative spring arm, player input drives boat instead of character.
@@ -197,6 +212,7 @@ Single slot. Atomic save: write to `save.tmp`, fsync, rename over `save.dat`.
 **Persisted state** (per your list):
 - World seed + game version
 - Player: position, rotation, HP/stamina/hunger, inventory, equipment, skill table
+  - *Inventory persists as flat `{item_id, count}` stacks; `ItemDef` refs resolved on load via `InventoryRegistry`, never serialized.*
 - **Ship states**: per ship — position, rotation, HP, inventory, anchored flag
 - **Inventory** (player) and **ship inventory** (per ship)
 - **Discovered map regions** (chunk ids the player has entered)
