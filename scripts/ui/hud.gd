@@ -1,9 +1,6 @@
 class_name HUD
 extends CanvasLayer
 
-const SkillToastScript      := preload("res://scripts/ui/skill_toast.gd")
-const InventoryScreenScript := preload("res://scripts/ui/inventory_screen.gd")
-
 var _pickup_label: Label
 var _pickup_tween: Tween
 
@@ -11,13 +8,14 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 9
 
-	var toast := SkillToastScript.new()
+	var toast := SkillToast.new()
 	add_child(toast)
 
-	var inv_screen := InventoryScreenScript.new()
+	var inv_screen := InventoryScreen.new()
 	add_child(inv_screen)
 
 	_pickup_label = Label.new()
+	_pickup_label.name = "PickupLabel"
 	_pickup_label.anchor_left   = 0.0
 	_pickup_label.anchor_right  = 0.0
 	_pickup_label.anchor_top    = 1.0

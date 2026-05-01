@@ -104,11 +104,13 @@ func _sample_terrain(x: float, z: float) -> float:
 
 func _spawn_hud() -> void:
 	var hud := HUDScript.new()
+	hud.name = "PlayerHUD"
 	add_child(hud)
 
 
 func _spawn_boat() -> void:
 	var boat := BoatScript.new()
+	boat.name = "Boat"
 	boat.water_y = WATER_Y
 	boat.position = Vector3(62.0, WATER_Y, 0.0)
 	add_child(boat)

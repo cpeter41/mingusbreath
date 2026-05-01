@@ -9,7 +9,6 @@
 [ext_resource type="Script" uid="uid://tyhr0nfre37n" path="res://scripts/player/movement_states/jump.gd" id="7_jump"]
 [ext_resource type="Script" uid="uid://bd2fxngxunliv" path="res://scripts/player/movement_states/fall.gd" id="8_fall"]
 [ext_resource type="Script" uid="uid://ctshxxwb1ito4" path="res://scripts/player/actionSM.gd" id="10_180ig"]
-[ext_resource type="PackedScene" uid="uid://dd6deav3yfni3" path="res://scenes/weapons/Sword.tscn" id="10_sword"]
 [ext_resource type="Script" uid="uid://be2yccai2wdfa" path="res://scripts/player/action_states/idle.gd" id="11_20koh"]
 [ext_resource type="Script" uid="uid://cmcuef4yexe0h" path="res://scripts/player/action_states/attack.gd" id="12_ov1oi"]
 [ext_resource type="Script" uid="uid://drdgh25wibco4" path="res://scripts/inventory/inventory.gd" id="13_20koh"]
@@ -44,8 +43,6 @@ script = ExtResource("2_pcam")
 
 [node name="WeaponMount" type="Node3D" parent="." unique_id=716419572]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.2, -0.5)
-
-[node name="Sword" parent="WeaponMount" unique_id=1457676848 instance=ExtResource("10_sword")]
 
 [node name="MovementStateMachine" type="Node" parent="." unique_id=1801636306]
 script = ExtResource("3_sm")
