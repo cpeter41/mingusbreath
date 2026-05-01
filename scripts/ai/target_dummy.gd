@@ -15,10 +15,17 @@ func _ready() -> void:
 func take_damage(amount: float, source: Node = null) -> void:
 	hp -= amount
 	_flash_red()
-	print("[Dummy] hp=%.1f" % hp)
 	if hp <= 0.0:
 		EventBus.enemy_killed.emit(&"target_dummy", source)
+		_spawn_loot()
 		queue_free()
+
+func _spawn_loot() -> void:
+	var pickup := ItemPickup.new()
+	pickup.item_id = &"scrap"
+	pickup.count = 1
+	pickup.position = position
+	get_parent().add_child(pickup)
 
 
 func _flash_red() -> void:
