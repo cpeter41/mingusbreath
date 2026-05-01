@@ -17,6 +17,7 @@ const MOUSE_SENSITIVITY := 0.003
 var throttle: float = 0.0
 var mounted: bool = false
 var _player: Node = null
+var _mount_rotation_offset: float = 0.0
 
 var _hull_mesh: MeshInstance3D
 var _mount_zone: Area3D
@@ -101,10 +102,12 @@ func _input(event: InputEvent) -> void:
 func _mount(player: Node) -> void:
 	_player = player
 	mounted = true
+	_mount_rotation_offset = 0.0
+	var old_yaw: float = player.rotation.y
+	player.rotation.y = rotation.y
 	player.global_position = _deck_spawn.global_position
-	player.process_mode = Node.PROCESS_MODE_DISABLED
-	# Match boat camera to player camera angle before switching
-	_camera_pivot.rotation.y = player.rotation.y - rotation.y
+	player.on_boat = true
+	_camera_pivot.rotation.y = old_yaw - rotation.y
 	_spring_arm.rotation.x = player.camera_pivot.rotation.x
 	_camera.current = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -116,8 +119,7 @@ func _dismount() -> void:
 		_player.camera_pivot.rotation.x = _spring_arm.rotation.x
 		_player.global_position = _deck_spawn.global_position
 		_player.velocity = Vector3.ZERO
-		_player.visible = true
-		_player.process_mode = Node.PROCESS_MODE_INHERIT
+		_player.on_boat = false
 	_camera.current = false
 	mounted = false
 	throttle = 0.0
@@ -145,3 +147,4 @@ func _physics_process(delta: float) -> void:
 	position.y = water_y
 	if _player != null:
 		_player.global_position = _deck_spawn.global_position
+		_player.rotation.y = rotation.y + _mount_rotation_offset

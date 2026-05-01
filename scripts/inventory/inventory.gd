@@ -1,6 +1,8 @@
 class_name Inventory
 extends Node
 
+signal changed
+
 const MAX_SLOTS := 20
 
 # Each slot: { "item_id": StringName, "count": int }
@@ -33,6 +35,7 @@ func add(item_id: StringName, count: int) -> int:
 		remaining -= take
 	if remaining > 0:
 		push_warning("[Inventory] full — %d x %s did not fit" % [remaining, item_id])
+	changed.emit()
 	return remaining
 
 # Returns false if not enough items present.
@@ -49,6 +52,7 @@ func remove(item_id: StringName, count: int) -> bool:
 			remaining -= take
 			if slots[i]["count"] <= 0:
 				slots.remove_at(i)
+	changed.emit()
 	return true
 
 func count_of(item_id: StringName) -> int:
