@@ -10,10 +10,15 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var camera_pivot: Node3D = $CameraPivot
 @onready var movementSM: Node = $MovementStateMachine
 @onready var actionSM: Node = $ActionStateMachine
+@onready var inventory: Inventory = $Inventory
 
 
 func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+func take_pickup(item_id: StringName, count: int) -> void:
+	inventory.add(item_id, count)
+	EventBus.item_picked_up.emit(item_id, count)
 
 
 func _unhandled_input(event: InputEvent) -> void:
