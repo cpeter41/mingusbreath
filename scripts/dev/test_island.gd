@@ -3,6 +3,7 @@ extends Node3D
 
 const PlayerScene := preload("res://scenes/player/Player.tscn")
 const DummyScene  := preload("res://scenes/ai/TargetDummy.tscn")
+const HUDScript   := preload("res://scripts/ui/hud.gd")
 
 func _ready() -> void:
 	_add_lighting()
@@ -10,6 +11,7 @@ func _ready() -> void:
 	_add_water()
 	_spawn_player()
 	_spawn_dummies()
+	_spawn_hud()
 	_connect_debug_signals()
 
 
@@ -96,10 +98,16 @@ func _sample_terrain(x: float, z: float) -> float:
 	return result.position.y if result else 0.0
 
 
+func _spawn_hud() -> void:
+	var hud := HUDScript.new()
+	add_child(hud)
+
+
 func _connect_debug_signals() -> void:
 	EventBus.damage_dealt.connect(
 		func(atk, _tgt, wpn, skl, amt):
-			print("[damage_dealt] %.1f  weapon=%s  skill=%s" % [amt, wpn, skl])
+			#print("[damage_dealt] %.1f  weapon=%s  skill=%s" % [amt, wpn, skl])
+			pass
 	)
 	EventBus.enemy_killed.connect(
 		func(enemy_id, _killer):
