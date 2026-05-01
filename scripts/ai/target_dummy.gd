@@ -17,10 +17,11 @@ func take_damage(amount: float, source: Node = null) -> void:
 	_flash_red()
 	if hp <= 0.0:
 		EventBus.enemy_killed.emit(&"target_dummy", source)
-		_spawn_loot()
+		_drop_loot()
 		queue_free()
 
-func _spawn_loot() -> void:
+func _drop_loot() -> void:
+	# consider dropping from loot table, in future
 	var pickup := ItemPickup.new()
 	pickup.item_id = &"scrap"
 	pickup.count = 1
