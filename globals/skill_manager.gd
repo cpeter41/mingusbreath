@@ -36,7 +36,6 @@ func add_xp(skill_id: StringName, amount: float) -> void:
 		for lvl in range(old_level + 1, new_level + 1):
 			skills[skill_id]["level"] = lvl
 			EventBus.skill_leveled.emit(skill_id, lvl)
-			print("[SkillManager] skill_leveled %s -> %d" % [skill_id, lvl])
 
 func _compute_level(skill_id: StringName) -> int:
 	var xp: float = float(skills[skill_id].get("xp", 0.0))

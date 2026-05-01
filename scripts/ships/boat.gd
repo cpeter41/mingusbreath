@@ -86,7 +86,7 @@ func _input(event: InputEvent) -> void:
 			_dismount()
 		else:
 			var player := get_tree().get_first_node_in_group("player")
-			if player != null and _mount_zone.overlaps_body(player):
+			if player != null and _mount_zone.overlaps_body(player) and player.is_on_floor():
 				_mount(player)
 		return
 

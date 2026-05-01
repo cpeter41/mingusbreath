@@ -27,5 +27,4 @@ func _ready() -> void:
 func _on_body_entered(body: Node) -> void:
 	if body.has_method("take_pickup"):
 		body.take_pickup(item_id, count)
-		print("[Inventory] slots: ", body.inventory.slots)
 		queue_free()
