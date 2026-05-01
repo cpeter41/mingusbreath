@@ -3,6 +3,10 @@ extends Node3D
 
 const PlayerScene := preload("res://scenes/player/Player.tscn")
 const DummyScene  := preload("res://scenes/ai/TargetDummy.tscn")
+const HUDScript   := preload("res://scripts/ui/hud.gd")
+const BoatScript  := preload("res://scripts/ships/boat.gd")
+
+const WATER_Y := -0.15
 
 func _ready() -> void:
 	_add_lighting()
@@ -10,6 +14,8 @@ func _ready() -> void:
 	_add_water()
 	_spawn_player()
 	_spawn_dummies()
+	_spawn_boat()
+	_spawn_hud()
 	_connect_debug_signals()
 
 
@@ -42,7 +48,7 @@ func _add_water() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.09, 0.28, 0.72)
 	water.material_override = mat
-	water.position.y = -0.15
+	water.position.y = WATER_Y
 	add_child(water)
 
 
@@ -96,10 +102,23 @@ func _sample_terrain(x: float, z: float) -> float:
 	return result.position.y if result else 0.0
 
 
+func _spawn_hud() -> void:
+	var hud := HUDScript.new()
+	add_child(hud)
+
+
+func _spawn_boat() -> void:
+	var boat := BoatScript.new()
+	boat.water_y = WATER_Y
+	boat.position = Vector3(62.0, WATER_Y, 0.0)
+	add_child(boat)
+
+
 func _connect_debug_signals() -> void:
 	EventBus.damage_dealt.connect(
 		func(atk, _tgt, wpn, skl, amt):
-			print("[damage_dealt] %.1f  weapon=%s  skill=%s" % [amt, wpn, skl])
+			#print("[damage_dealt] %.1f  weapon=%s  skill=%s" % [amt, wpn, skl])
+			pass
 	)
 	EventBus.enemy_killed.connect(
 		func(enemy_id, _killer):

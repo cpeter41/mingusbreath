@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"run"
+display_name = "Run"
+xp_curve = PackedFloat32Array(10, 30, 80, 200, 500)
+per_level_damage_mult = 1.0
+per_level_stamina_mult = 1.0
