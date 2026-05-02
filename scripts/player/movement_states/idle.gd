@@ -9,7 +9,8 @@ func physics_update(delta: float) -> void:
 		return
 
 	if Input.is_action_just_pressed("jump"):
-		movementSM.transition_to("jump")
+		if player.consume_stamina(15.0):
+			movementSM.transition_to("jump")
 		return
 
 	if _get_move_dir() != Vector3.ZERO:

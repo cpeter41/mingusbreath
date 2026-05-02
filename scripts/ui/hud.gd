@@ -14,6 +14,62 @@ func _ready() -> void:
 	var inv_screen := InventoryScreen.new()
 	add_child(inv_screen)
 
+	_add_stat_bars()
+	_add_pickup_label()
+
+	EventBus.item_picked_up.connect(_on_item_picked_up)
+
+
+func _add_stat_bars() -> void:
+	var hp_bar := StatBar.new()
+	hp_bar.name = "HPBar"
+	hp_bar.anchor_left   = 0.0
+	hp_bar.anchor_right  = 0.0
+	hp_bar.anchor_top    = 0.0
+	hp_bar.anchor_bottom = 0.0
+	hp_bar.offset_left   = 16.0
+	hp_bar.offset_right  = 216.0
+	hp_bar.offset_top    = 16.0
+	hp_bar.offset_bottom = 46.0
+	hp_bar.add_theme_color_override("font_color", Color.WHITE)
+	_apply_bar_styles(hp_bar, Color(0.8, 0.15, 0.15))
+	add_child(hp_bar)
+	hp_bar.bind_to(EventBus.player_hp_changed)
+
+	var stamina_bar := StatBar.new()
+	stamina_bar.name = "StaminaBar"
+	stamina_bar.anchor_left   = 0.0
+	stamina_bar.anchor_right  = 0.0
+	stamina_bar.anchor_top    = 0.0
+	stamina_bar.anchor_bottom = 0.0
+	stamina_bar.offset_left   = 16.0
+	stamina_bar.offset_right  = 216.0
+	stamina_bar.offset_top    = 54.0
+	stamina_bar.offset_bottom = 84.0
+	_apply_bar_styles(stamina_bar, Color(0.15, 0.75, 0.25))
+	add_child(stamina_bar)
+	stamina_bar.bind_to(EventBus.player_stamina_changed)
+
+
+func _apply_bar_styles(bar: ProgressBar, fill_color: Color, radius: int = 5) -> void:
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.12, 0.12, 0.12)
+	bg.corner_radius_top_left     = radius
+	bg.corner_radius_top_right    = radius
+	bg.corner_radius_bottom_left  = radius
+	bg.corner_radius_bottom_right = radius
+	bar.add_theme_stylebox_override("background", bg)
+
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = fill_color
+	fill.corner_radius_top_left     = radius
+	fill.corner_radius_top_right    = radius
+	fill.corner_radius_bottom_left  = radius
+	fill.corner_radius_bottom_right = radius
+	bar.add_theme_stylebox_override("fill", fill)
+
+
+func _add_pickup_label() -> void:
 	_pickup_label = Label.new()
 	_pickup_label.name = "PickupLabel"
 	_pickup_label.anchor_left   = 0.0
@@ -28,7 +84,6 @@ func _ready() -> void:
 	_pickup_label.modulate.a = 0.0
 	add_child(_pickup_label)
 
-	EventBus.item_picked_up.connect(_on_item_picked_up)
 
 func _on_item_picked_up(item_id: StringName, count: int) -> void:
 	var def = InventoryRegistry.get_item(item_id)
