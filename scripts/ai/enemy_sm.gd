@@ -1,12 +1,12 @@
-class_name ActionSM
+class_name EnemyMovementSM
 extends StateMachine
 
 
 func _ready() -> void:
-	var player := owner as CharacterBody3D
+	var enemy := owner as Enemy
 	for child in get_children():
-		if child is ActionState:
+		if child is EnemyMovementState:
 			_states[child.name.to_lower()] = child
-			child.player = player
-			child.actionSM = self
+			child.enemy = enemy
+			child.movementSM = self
 	transition_to.call_deferred("idle")

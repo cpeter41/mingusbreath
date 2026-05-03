@@ -1,5 +1,5 @@
-class_name ActionState
+class_name EnemyActionState
 extends BaseState
 
-var player: CharacterBody3D
+var enemy: Enemy
 var actionSM: StateMachine  # concrete type causes circular ref

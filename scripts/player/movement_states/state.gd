@@ -1,17 +1,11 @@
 class_name MovementState
-extends Node
+extends BaseState
 
 const DECELERATION_MOD := 10.0
 
 var player: CharacterBody3D
-var movementSM: Node  # PlayerStateMachine, typed as Node to avoid circular ref
+var movementSM: StateMachine  # concrete type causes circular ref
 
-func enter() -> void: pass
-func exit() -> void: pass
-func physics_update(_delta: float) -> void: pass
-func handle_input(_event: InputEvent) -> void: pass
-
-# ── Shared helpers ────────────────────────────────────────────────────────────
 
 func _apply_gravity(delta: float) -> void:
 	if not player.is_on_floor():
