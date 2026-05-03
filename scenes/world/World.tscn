@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/world_root.gd" id="1_wr"]
+[ext_resource type="Script" path="res://scripts/world/ocean_follower.gd" id="2_of"]
+[ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="3_pl"]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.45, 0.65, 0.90, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.4, 0.45, 0.5, 1)
+ambient_light_energy = 0.5
+
+[sub_resource type="PlaneMesh" id="Plane_1"]
+size = Vector2(4096.0, 4096.0)
+subdivide_width = 32
+subdivide_depth = 32
+
+[sub_resource type="StandardMaterial3D" id="WaterMat_1"]
+albedo_color = Color(0.09, 0.28, 0.72, 1)
+
+[node name="WorldRoot" type="Node3D"]
+script = ExtResource("1_wr")
+
+[node name="IslandContainer" type="Node3D" parent="."]
+
+[node name="OceanFollower" type="Node3D" parent="."]
+script = ExtResource("2_of")
+
+[node name="WaterMesh" type="MeshInstance3D" parent="OceanFollower"]
+position = Vector3(0, -0.15, 0)
+mesh = SubResource("Plane_1")
+material_override = SubResource("WaterMat_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.785398, 0.523599, 0.0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="WorldEnv" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Player" parent="." instance=ExtResource("3_pl")]
+position = Vector3(0, 15, 0)

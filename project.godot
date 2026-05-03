@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Mingusbreath"
-run/main_scene="res://scenes/dev/test_island.tscn"
+run/main_scene="res://scenes/world/World.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]

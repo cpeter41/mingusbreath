@@ -14,3 +14,7 @@ signal player_stamina_changed(stamina: float, max_stamina: float)
 signal player_died()
 signal player_respawned()
 signal player_parried(attacker: Node)
+signal world_loaded
+signal island_loaded(placement: IslandPlacement, instance: Node3D)
+signal island_unloaded(runtime_id: StringName)
+signal biome_entered(biome: BiomeDef)
