@@ -4,7 +4,7 @@ extends Node
 
 const SAVE_PATH := "user://save.dat"
 const TEMP_PATH := "user://save.tmp"
-const SCHEMA_VERSION := 1
+const SCHEMA_VERSION := 2
 
 var _saveables: Array[Node] = []
 
@@ -65,8 +65,12 @@ func load_or_init() -> void:
 			n.load_data(payload[n.name])
 
 func _migrate(payload: Dictionary, from_version: int) -> Dictionary:
-	# v1 is current. Future migrations chain here, e.g.
-	# if from_version < 2: payload = _v1_to_v2(payload)
 	if from_version > SCHEMA_VERSION:
 		push_warning("SaveSystem: save is from a newer version (%d > %d); attempting to load anyway" % [from_version, SCHEMA_VERSION])
+	if from_version < 2:
+		if not payload.has("IslandDeltaStore"):
+			payload["IslandDeltaStore"] = {}
+		if not payload.has("TimeOfDay"):
+			payload["TimeOfDay"] = {"game_minutes": 480.0}
+		# Player key absent on v1 → load_data not called; fresh-spawn path takes over.
 	return payload

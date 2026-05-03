@@ -1,6 +1,10 @@
 class_name WorldRoot
 extends Node3D
 
+const AUTOSAVE_INTERVAL := 60.0
+
+var _autosave_timer: float = 0.0
+
 
 func _ready() -> void:
 	# Strict order — do not reorder.
@@ -21,6 +25,14 @@ func _ready() -> void:
 	var hud := HUD.new()
 	hud.name = "PlayerHUD"
 	add_child(hud)
+
+func _process(delta: float) -> void:
+	if not ($Player as Node3D).get("_world_ready"):
+		return
+	_autosave_timer += delta
+	if _autosave_timer >= AUTOSAVE_INTERVAL:
+		_autosave_timer = 0.0
+		SaveSystem.save()
 
 
 func _exit_tree() -> void:
