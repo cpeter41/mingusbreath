@@ -4,21 +4,21 @@
 [ext_resource type="Script" uid="uid://cvjhxi8qfderd" path="res://scripts/combat/hitbox.gd" id="2_hb"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
-size = Vector3(0.05, 0.6, 0.05)
+size = Vector3(0.05, 0.8, 0.05)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
-size = Vector3(0.15, 0.55, 0.15)
+size = Vector3(0.15, 0.73, 0.15)
 
 [node name="Sword" type="Node3D" unique_id=1055447677]
 script = ExtResource("1_sw")
 
 [node name="Blade" type="MeshInstance3D" parent="." unique_id=2103834362]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
 mesh = SubResource("BoxMesh_1")
 
 [node name="Hitbox" type="Area3D" parent="." unique_id=1635892470]
 script = ExtResource("2_hb")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Hitbox" unique_id=111089906]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
 shape = SubResource("BoxShape3D_1")

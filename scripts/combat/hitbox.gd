@@ -16,7 +16,7 @@ func _on_area_entered(area: Area3D) -> void:
 		return
 	var target   := area.owner
 	var attacker := get_parent().owner  # Sword.owner = Player (set when instanced in Player.tscn)
-	var amount   := CombatResolver.resolve(attacker, target, weapon_id, damage)
+	var amount   := CombatResolver.resolve(attacker, target, weapon_id, damage, skill_id)
 	EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)
 	SkillManager.add_xp(skill_id, amount * 0.1)
 	if target.has_method("take_damage"):

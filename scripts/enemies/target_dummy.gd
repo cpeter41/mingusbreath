@@ -21,12 +21,11 @@ func take_damage(amount: float, source: Node = null) -> void:
 		queue_free()
 
 func _drop_loot() -> void:
-	# consider dropping from loot table, in future
 	var pickup := ItemPickup.new()
 	pickup.item_id = &"scrap"
 	pickup.count = 1
-	pickup.position = position
 	get_parent().add_child(pickup)
+	pickup.spring(global_position + Vector3.UP * 0.5)
 
 
 func _flash_red() -> void:

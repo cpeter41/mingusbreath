@@ -34,6 +34,7 @@ static func generate(seed: int, size_m: int, max_height_m: float) -> Dictionary:
 	return {
 		"mesh": _build_mesh(heights, resolution),
 		"collider": _build_collider(heights, resolution),
+		"shore_wall": _build_shore_wall(heights, resolution),
 	}
 
 
@@ -77,6 +78,54 @@ static func _build_collider(heights: PackedFloat32Array, resolution: int) -> Hei
 	shape.map_depth = resolution
 	shape.map_data  = heights
 	return shape
+
+
+## Builds an invisible vertical wall along the shoreline (where height crosses WALL_THRESHOLD).
+## Boat hulls collide with this; terrain heightmap alone is too gentle to deflect them at the edge.
+static func _build_shore_wall(heights: PackedFloat32Array, resolution: int) -> ConcavePolygonShape3D:
+	const WALL_THRESHOLD := 0.3
+	const WALL_BOTTOM_Y  := -3.0
+	const WALL_TOP_Y     := 4.0
+	var half := (resolution - 1) * 0.5
+	var faces := PackedVector3Array()
+
+	for z in (resolution - 1):
+		for x in (resolution - 1):
+			var i := x + z * resolution
+			var h00 := heights[i]
+			var h10 := heights[i + 1]
+			var h01 := heights[i + resolution]
+			# +X edge crossing
+			if (h00 < WALL_THRESHOLD) != (h10 < WALL_THRESHOLD):
+				var tx := (WALL_THRESHOLD - h00) / (h10 - h00)
+				var wxx := (float(x) + tx) - half
+				var wzx := float(z) - half
+				_emit_quad(faces, Vector3(wxx, WALL_BOTTOM_Y, wzx), Vector3(wxx, WALL_TOP_Y, wzx + 1.0))
+			# +Z edge crossing
+			if (h00 < WALL_THRESHOLD) != (h01 < WALL_THRESHOLD):
+				var tz := (WALL_THRESHOLD - h00) / (h01 - h00)
+				var wxz := float(x) - half
+				var wzz := (float(z) + tz) - half
+				_emit_quad(faces, Vector3(wxz, WALL_BOTTOM_Y, wzz), Vector3(wxz + 1.0, WALL_TOP_Y, wzz))
+
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(faces)
+	return shape
+
+
+## Appends two triangles forming a vertical quad from `a` (bottom corner) to `b` (top opposite corner).
+## Both winding orders added so the wall is solid from either side.
+static func _emit_quad(faces: PackedVector3Array, a: Vector3, b: Vector3) -> void:
+	var p0 := a
+	var p1 := Vector3(b.x, a.y, b.z)
+	var p2 := b
+	var p3 := Vector3(a.x, b.y, a.z)
+	# Front
+	faces.append(p0); faces.append(p1); faces.append(p2)
+	faces.append(p0); faces.append(p2); faces.append(p3)
+	# Back (reverse winding)
+	faces.append(p0); faces.append(p2); faces.append(p1)
+	faces.append(p0); faces.append(p3); faces.append(p2)
 
 
 static func _normal_at(heights: PackedFloat32Array, resolution: int, x: int, z: int) -> Vector3:

@@ -1,0 +1,87 @@
+[gd_scene format=3 uid="uid://ce16lrg41lcgl"]
+
+[ext_resource type="Script" uid="uid://cg7vrk12137tv" path="res://scripts/enemies/enemy.gd" id="1"]
+[ext_resource type="Script" uid="uid://n7wjkwsxwkm4" path="res://scripts/enemies/enemy_states/enemy_sm.gd" id="2"]
+[ext_resource type="Script" uid="uid://cgcss0l88is3g" path="res://scripts/enemies/enemy_states/movement_state/idle.gd" id="3"]
+[ext_resource type="Script" uid="uid://dxpso6u3mxk36" path="res://scripts/enemies/enemy_states/movement_state/patrol.gd" id="4"]
+[ext_resource type="Script" uid="uid://dg44vrefbdcnt" path="res://scripts/enemies/enemy_states/movement_state/sense.gd" id="5"]
+[ext_resource type="Script" uid="uid://be37m2awfw1va" path="res://scripts/enemies/enemy_states/movement_state/chase.gd" id="6"]
+[ext_resource type="Script" uid="uid://dcl1p6aha6adg" path="res://scripts/enemies/enemy_states/movement_state/flee.gd" id="7"]
+[ext_resource type="Script" uid="uid://ue5edwvhn5lq" path="res://scripts/enemies/enemy_states/movement_state/return.gd" id="8"]
+[ext_resource type="Resource" path="res://data/enemies/husk.tres" id="9"]
+[ext_resource type="Script" uid="uid://cqmymhy8au4yq" path="res://scripts/enemies/enemy_states/enemy_action_sm.gd" id="10"]
+[ext_resource type="Script" uid="uid://dt672l0fjtjbf" path="res://scripts/enemies/enemy_states/action_state/action_idle.gd" id="11"]
+[ext_resource type="Script" uid="uid://cnv482h7kvfvr" path="res://scripts/enemies/enemy_states/action_state/attack.gd" id="12"]
+[ext_resource type="Script" uid="uid://drpg4uaiadcnp" path="res://scripts/combat/hurtbox.gd" id="14"]
+[ext_resource type="Script" uid="uid://buirja1nmcf04" path="res://scripts/enemies/enemy_states/action_state/stagger.gd" id="15"]
+
+[sub_resource type="CapsuleMesh" id="13"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="16"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="17"]
+radius = 0.4
+height = 1.6
+
+[sub_resource type="SphereShape3D" id="18"]
+radius = 0.6
+
+[node name="Husk" type="CharacterBody3D" unique_id=42076469]
+script = ExtResource("1")
+def = ExtResource("9")
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1444791563]
+mesh = SubResource("13")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=183984543]
+shape = SubResource("16")
+
+[node name="Hurtbox" type="Area3D" parent="." unique_id=1327075093]
+script = ExtResource("14")
+
+[node name="HurtboxShape" type="CollisionShape3D" parent="Hurtbox" unique_id=299613661]
+shape = SubResource("17")
+
+[node name="AttackHitbox" type="Area3D" parent="." unique_id=902859334]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, -1)
+monitoring = false
+
+[node name="AttackHitboxShape" type="CollisionShape3D" parent="AttackHitbox" unique_id=1113857606]
+shape = SubResource("18")
+
+[node name="EnemyMovementSM" type="Node" parent="." unique_id=956811914]
+script = ExtResource("2")
+
+[node name="Idle" type="Node" parent="EnemyMovementSM" unique_id=514541699]
+script = ExtResource("3")
+
+[node name="Patrol" type="Node" parent="EnemyMovementSM" unique_id=1330233473]
+script = ExtResource("4")
+
+[node name="Sense" type="Node" parent="EnemyMovementSM" unique_id=77297107]
+script = ExtResource("5")
+
+[node name="Chase" type="Node" parent="EnemyMovementSM" unique_id=2079239356]
+script = ExtResource("6")
+
+[node name="Flee" type="Node" parent="EnemyMovementSM" unique_id=1002883771]
+script = ExtResource("7")
+
+[node name="Return" type="Node" parent="EnemyMovementSM" unique_id=668660811]
+script = ExtResource("8")
+
+[node name="EnemyActionSM" type="Node" parent="." unique_id=2066597094]
+script = ExtResource("10")
+
+[node name="Idle" type="Node" parent="EnemyActionSM" unique_id=1950353523]
+script = ExtResource("11")
+
+[node name="Attack" type="Node" parent="EnemyActionSM" unique_id=2142589241]
+script = ExtResource("12")
+
+[node name="Stagger" type="Node" parent="EnemyActionSM" unique_id=1665892214]
+script = ExtResource("15")
