@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/islands/island_forest_01_mesh.tres" id="1_mesh"]
+[ext_resource type="HeightMapShape3D" path="res://assets/islands/island_forest_01_collider.tres" id="2_col"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_1"]
+albedo_color = Color(0.20, 0.40, 0.18, 1)
+roughness = 0.85
+
+[node name="Island" type="Node3D"]
+
+[node name="Terrain" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_mesh")
+material_override = SubResource("Mat_1")
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Body"]
+shape = ExtResource("2_col")
+
+[node name="SpawnAnchor" type="Node3D" parent="."]
+position = Vector3(0, 8, 0)
+
+[node name="DeltaRoot" type="Node3D" parent="."]
