@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/ai/enemy.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ai/enemy_sm.gd" id="2"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scripts/ai/enemy_action_sm.gd" id="10"]
 [ext_resource type="Script" path="res://scripts/ai/enemy_states/action_idle.gd" id="11"]
 [ext_resource type="Script" path="res://scripts/ai/enemy_states/attack.gd" id="12"]
+[ext_resource type="Script" path="res://scripts/combat/hurtbox.gd" id="14"]
 
 [sub_resource type="CapsuleMesh" id="13"]
 height = 1.8
@@ -27,6 +28,7 @@ mesh = SubResource("13")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 
 [node name="Hurtbox" type="Area3D" parent="."]
+script = ExtResource("14")
 
 [node name="HurtboxShape" type="CollisionShape3D" parent="Hurtbox"]
 

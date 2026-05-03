@@ -24,6 +24,29 @@ func _ready() -> void:
 	_hit_mat = StandardMaterial3D.new()
 	_hit_mat.albedo_color = Color.RED
 	attack_hitbox.monitoring = false
+	_ensure_collision_shapes()
+
+
+func _ensure_collision_shapes() -> void:
+	var body_col := $CollisionShape3D as CollisionShape3D
+	if body_col and body_col.shape == null:
+		var cap := CapsuleShape3D.new()
+		cap.height = 1.8
+		cap.radius = 0.4
+		body_col.shape = cap
+
+	var hurtbox_col := $Hurtbox/HurtboxShape as CollisionShape3D
+	if hurtbox_col and hurtbox_col.shape == null:
+		var cap := CapsuleShape3D.new()
+		cap.height = 1.6
+		cap.radius = 0.4
+		hurtbox_col.shape = cap
+
+	var atk_col := $AttackHitbox/AttackHitboxShape as CollisionShape3D
+	if atk_col and atk_col.shape == null:
+		var sphere := SphereShape3D.new()
+		sphere.radius = 0.6
+		atk_col.shape = sphere
 
 
 func _physics_process(delta: float) -> void:

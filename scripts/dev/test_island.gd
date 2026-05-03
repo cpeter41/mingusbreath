@@ -3,6 +3,7 @@ extends Node3D
 
 const PlayerScene := preload("res://scenes/player/Player.tscn")
 const DummyScene  := preload("res://scenes/ai/TargetDummy.tscn")
+const HuskScene   := preload("res://scenes/ai/Husk.tscn")
 const HUDScript   := preload("res://scripts/ui/hud.gd")
 const BoatScript  := preload("res://scripts/ships/boat.gd")
 
@@ -14,6 +15,7 @@ func _ready() -> void:
 	_add_water()
 	_spawn_player()
 	_spawn_dummies()
+	_spawn_husks()
 	_spawn_boat()
 	_spawn_hud()
 	_connect_debug_signals()
@@ -90,6 +92,19 @@ func _spawn_dummies() -> void:
 		var dummy := DummyScene.instantiate()
 		dummy.position = Vector3(xz.x, h, xz.y)
 		add_child(dummy)
+
+
+func _spawn_husks() -> void:
+	await get_tree().physics_frame
+	var xz_offsets := [
+		Vector2( 8.0,  0.0),
+		Vector2(-8.0,  0.0),
+	]
+	for xz in xz_offsets:
+		var h := _sample_terrain(xz.x, xz.y)
+		var husk := HuskScene.instantiate()
+		husk.position = Vector3(xz.x, h + 0.9, xz.y)
+		add_child(husk)
 
 
 func _sample_terrain(x: float, z: float) -> float:
