@@ -1,11 +1,11 @@
 class_name CombatResolver
 
-## Phase 2: returns base_damage directly.
-## Multipliers (skill, resistance) land with the full skill system.
 static func resolve(
 	_attacker: Node,
 	_target: Node,
 	_weapon_id: StringName,
-	base_damage: float
+	base_damage: float,
+	skill_id: StringName = &""
 ) -> float:
-	return base_damage
+	var level := SkillManager.get_level(skill_id) if skill_id != &"" else 1
+	return base_damage * (1.0 + 0.1 * (level - 1))

@@ -1,7 +1,7 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/ai/target_dummy.gd" id="1_td"]
-[ext_resource type="Script" path="res://scripts/combat/hurtbox.gd" id="2_hb"]
+[ext_resource type="Script" uid="uid://2u2ugq18tt62" path="res://scripts/enemies/target_dummy.gd" id="1_td"]
+[ext_resource type="Script" uid="uid://drpg4uaiadcnp" path="res://scripts/combat/hurtbox.gd" id="2_hb"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
 radius = 0.35

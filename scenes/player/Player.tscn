@@ -12,12 +12,19 @@
 [ext_resource type="Script" uid="uid://be2yccai2wdfa" path="res://scripts/player/action_states/idle.gd" id="11_20koh"]
 [ext_resource type="Script" uid="uid://cmcuef4yexe0h" path="res://scripts/player/action_states/attack.gd" id="12_ov1oi"]
 [ext_resource type="Script" uid="uid://drdgh25wibco4" path="res://scripts/inventory/inventory.gd" id="13_20koh"]
+[ext_resource type="Script" uid="uid://cqduk17gut6e2" path="res://scripts/player/action_states/block.gd" id="14_blk"]
+[ext_resource type="Script" uid="uid://cx5r2nalp3kqw" path="res://scripts/player/action_states/dodge.gd" id="15_dodg"]
+[ext_resource type="Script" uid="uid://drpg4uaiadcnp" path="res://scripts/combat/hurtbox.gd" id="16_hbox"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
 height = 1.8
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_2"]
 radius = 0.4
 height = 1.8
 
@@ -43,6 +50,9 @@ script = ExtResource("2_pcam")
 
 [node name="WeaponMount" type="Node3D" parent="." unique_id=716419572]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.2, -0.5)
+
+[node name="ShieldMount" type="Node3D" parent="." unique_id=987654321]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1, -0.2)
 
 [node name="MovementStateMachine" type="Node" parent="." unique_id=1801636306]
 script = ExtResource("3_sm")
@@ -70,6 +80,19 @@ script = ExtResource("11_20koh")
 
 [node name="Attack" type="Node" parent="ActionStateMachine" unique_id=344726428]
 script = ExtResource("12_ov1oi")
+
+[node name="Block" type="Node" parent="ActionStateMachine" unique_id=123456789]
+script = ExtResource("14_blk")
+
+[node name="Dodge" type="Node" parent="ActionStateMachine" unique_id=987123456]
+script = ExtResource("15_dodg")
+
+[node name="Hurtbox" type="Area3D" parent="." unique_id=876543210]
+script = ExtResource("16_hbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox" unique_id=765432109]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_2")
 
 [node name="Inventory" type="Node" parent="." unique_id=1015320278]
 script = ExtResource("13_20koh")

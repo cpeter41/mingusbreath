@@ -2,7 +2,8 @@ extends Node3D
 ## Dev sandbox — not shipped. Removed when real spawn flow lands.
 
 const PlayerScene := preload("res://scenes/player/Player.tscn")
-const DummyScene  := preload("res://scenes/ai/TargetDummy.tscn")
+const DummyScene  := preload("res://scenes/enemies/TargetDummy.tscn")
+const HuskScene   := preload("res://scenes/enemies/Husk.tscn")
 const HUDScript   := preload("res://scripts/ui/hud.gd")
 const BoatScript  := preload("res://scripts/ships/boat.gd")
 
@@ -14,6 +15,7 @@ func _ready() -> void:
 	_add_water()
 	_spawn_player()
 	_spawn_dummies()
+	_spawn_husks()
 	_spawn_boat()
 	_spawn_hud()
 	_connect_debug_signals()
@@ -37,6 +39,15 @@ func _build_island() -> void:
 	col.shape = data["collider"]
 	body.add_child(col)
 	add_child(body)
+
+	var shore := StaticBody3D.new()
+	shore.name = "ShoreWall"
+	shore.collision_layer = 8  # boat-only layer; player mask 1 won't detect it
+	shore.collision_mask = 0
+	var shore_col := CollisionShape3D.new()
+	shore_col.shape = data["shore_wall"]
+	shore.add_child(shore_col)
+	add_child(shore)
 
 
 func _add_water() -> void:
@@ -78,18 +89,24 @@ func _spawn_player() -> void:
 
 
 func _spawn_dummies() -> void:
-	# Wait one physics frame so terrain StaticBody3D is registered before raycasting.
+	await get_tree().physics_frame
+	var h := _sample_terrain(0.0, -6.0)
+	var dummy := DummyScene.instantiate()
+	dummy.position = Vector3(0.0, h, -6.0)
+	add_child(dummy)
+
+
+func _spawn_husks() -> void:
 	await get_tree().physics_frame
 	var xz_offsets := [
-		Vector2( 3.0, -3.0),
-		Vector2(-3.0, -3.0),
-		Vector2( 0.0, -6.0),
+		Vector2( 8.0,  0.0),
+		Vector2(-8.0,  0.0),
 	]
 	for xz in xz_offsets:
 		var h := _sample_terrain(xz.x, xz.y)
-		var dummy := DummyScene.instantiate()
-		dummy.position = Vector3(xz.x, h, xz.y)
-		add_child(dummy)
+		var husk := HuskScene.instantiate()
+		husk.position = Vector3(xz.x, h + 0.9, xz.y)
+		add_child(husk)
 
 
 func _sample_terrain(x: float, z: float) -> float:
@@ -124,5 +141,6 @@ func _connect_debug_signals() -> void:
 	)
 	EventBus.enemy_killed.connect(
 		func(enemy_id, _killer):
-			print("[enemy_killed] %s" % enemy_id)
+			#print("[enemy_killed] %s" % enemy_id)
+			pass
 	)

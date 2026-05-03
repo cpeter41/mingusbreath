@@ -123,12 +123,15 @@ Rule: autoloads never reach into scenes; scenes call autoloads or emit on EventB
   *Phase note: phases ship state subsets. `scripts/player/states/` is grown incrementally. Phase 2 implements Idle, Run, Sprint, Jump, Fall, Attack only.*
   *Phase 2 split this into two parallel state machines — movementSM (locomotion) and actionSM (attack/block/dodge) — running independently. Kept because it cleanly separates concerns.*
   *Phase 3 implements a minimal Sail action state: blocks all other action input, drives boat instead of player. Player capsule hidden during Sail. Movement SM frozen (Idle).*
+  *Phase 4 implements Block + Dodge as live actionSM states alongside Attack. Block reduces incoming damage and tracks a parry window; Dodge disables the hurtbox for ~0.4s i-frames.*
 - **Stats**: HP, Stamina, Hunger (Valheim-ish food buffs). Stamina drains on sprint/jump/attack/block-hit.
+- **Stamina costs** (canonical, tunable): `light_attack=10, heavy_attack=25, sprint=8/sec, jump=15, dodge=20, block=5/sec while taking hits`. Regen: `15/sec when idle for >0.5s since last stamina use`.
+- **Player death model**: HP ≤ 0 → fade-to-black (0.6s) → respawn at world origin (0, 15, 0) with full HP/stamina. Inventory and skills preserved; no item drops on death. HP and stamina are transient — not persisted across save/load, reset to max on every load.
 - **Melee**: Each weapon scene has an `Area3D` hitbox (per your call). Animation track toggles `monitoring` on/off during the active frames of the swing. Hits emit `EventBus.damage_dealt` carrying attacker, target, weapon, skill_id.
 - **Ranged**: Bow draws a charge → spawns an arrow `RigidBody3D` (or raycast for fast/cheap arrows) with damage payload. Drawing costs stamina, charge level scales damage.
 - **Block**: While blocking, incoming damage is reduced by block-skill multiplier and consumes stamina. Parry window if block is timed.
 - **Damage flow**: `Hurtbox` (Area3D on enemy/player) receives signal from hitbox, asks `CombatResolver` for final damage given resistances + skill multipliers, applies it, emits death event if HP ≤ 0.
-- **CombatResolver contract**: `static resolve(attacker: Node, target: Node, weapon_id: StringName, base_damage: float) -> float` — returns final damage after skill multipliers and resistances. Phase 2 implementation returns `base_damage` directly; multipliers land with the full skill system.
+- **CombatResolver contract**: `static resolve(attacker: Node, target: Node, weapon_id: StringName, base_damage: float) -> float` — returns final damage after skill multipliers and resistances. Phase 4 applies `SkillDef.per_level_damage_mult` linearly: `final = base_damage * (1.0 + 0.1 * (level - 1))`. Future tuning moves the formula or per-skill curves into `SkillDef`.
 
 **Critical scripts:**
 - `scripts/player/player.gd`, `player_camera.gd`, `states/*.gd`
@@ -191,6 +194,8 @@ Pure use-based, no XP loss on death. Skills:
 
 - **Biome-locked land enemies**: each `BiomeDef` lists day-spawn and night-spawn tables. Spawner per chunk picks from the right table based on `TimeOfDay` phase. Despawn when far from player.
 - **State machine** per enemy: Idle → Patrol → Sense → Chase → Attack → Flee/Return. Senses are sight-cone + hearing-radius.
+  *Phase 4 note: per-instance FSM (Idle/Patrol/Sense/Chase/Attack/Flee/Return). Single state machine — no movement/action split. Mirroring the player's actionSM/movementSM split is overkill for AI.*
+- **EnemyDef schema** (`data/enemies/*.tres`): `id: StringName, display_name: String, max_hp: float, damage: float, move_speed: float, sense_radius: float, attack_range: float, attack_cooldown: float, flee_hp_ratio: float = 0.2, loot_drops: Array[StringName] = []`. Stat multipliers by biome tier and biome-keyed spawn tables are deferred.
 - **Stats** scale by biome tier (meadows weakest, deeper/farther biomes stronger) — soft strength gating, no boss-kill flags required to enter biomes.
 - **Bosses**: one deterministic boss anchor per major biome. Bosses don't unlock anything mechanically; they drop strong gear/trophies that *let* the player survive harder biomes — gating is via player power, not flags.
 
