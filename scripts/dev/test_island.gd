@@ -40,6 +40,15 @@ func _build_island() -> void:
 	body.add_child(col)
 	add_child(body)
 
+	var shore := StaticBody3D.new()
+	shore.name = "ShoreWall"
+	shore.collision_layer = 8  # boat-only layer; player mask 1 won't detect it
+	shore.collision_mask = 0
+	var shore_col := CollisionShape3D.new()
+	shore_col.shape = data["shore_wall"]
+	shore.add_child(shore_col)
+	add_child(shore)
+
 
 func _add_water() -> void:
 	var water := MeshInstance3D.new()

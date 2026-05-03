@@ -1,7 +1,8 @@
 class_name Boat
 extends CharacterBody3D
 
-const HULL_SIZE := Vector3(2.0, 0.6, 5.0)
+const HULL_VISUAL_SIZE   := Vector3(2.0, 0.6, 5.0)
+const HULL_COLLIDER_SIZE := Vector3(2.0, 1.4, 5.0)
 const MOUNT_RADIUS := 3.5
 const MOUSE_SENSITIVITY := 0.003
 
@@ -27,6 +28,7 @@ var _spring_arm: SpringArm3D
 var _camera: Camera3D
 
 func _ready() -> void:
+	collision_mask = 9  # layer 1 (terrain) + layer 8 (shore wall)
 	_build_hull()
 	_build_deck_spawn()
 	_build_mount_zone()
@@ -35,7 +37,7 @@ func _ready() -> void:
 func _build_hull() -> void:
 	_hull_mesh = MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = HULL_SIZE
+	box.size = HULL_VISUAL_SIZE
 	_hull_mesh.mesh = box
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.42, 0.27, 0.14)
@@ -44,14 +46,16 @@ func _build_hull() -> void:
 
 	var col := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = HULL_SIZE
+	shape.size = HULL_COLLIDER_SIZE
 	col.shape = shape
+	# Drop collider so its top stays flush with the visual hull — extra depth hangs below the waterline.
+	col.position.y = (HULL_VISUAL_SIZE.y - HULL_COLLIDER_SIZE.y) * 0.5
 	add_child(col)
 
 func _build_deck_spawn() -> void:
 	_deck_spawn = Node3D.new()
 	_deck_spawn.name = "DeckSpawn"
-	_deck_spawn.position = Vector3(0.0, HULL_SIZE.y * 0.5 + 0.0, 0.0)  # top-center of hull
+	_deck_spawn.position = Vector3(0.0, HULL_VISUAL_SIZE.y * 0.5 + 0.0, 0.0)  # top-center of hull
 	add_child(_deck_spawn)
 
 func _build_mount_zone() -> void:
@@ -144,7 +148,9 @@ func _physics_process(delta: float) -> void:
 	velocity.y = 0.0
 
 	move_and_slide()
-	position.y = water_y
+	# Soft Y restore: lets terrain push the boat up momentarily so collision response
+	# can redirect XZ velocity, instead of being stomped by a hard `position.y = water_y`.
+	position.y = lerp(position.y, water_y, 0.4)
 	if _player != null:
 		_player.global_position = _deck_spawn.global_position
 		_player.rotation.y = rotation.y + _mount_rotation_offset
