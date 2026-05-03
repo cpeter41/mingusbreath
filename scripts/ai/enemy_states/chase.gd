@@ -26,3 +26,12 @@ func physics_update(delta: float) -> void:
 	dir = dir.normalized()
 	enemy.velocity.x = dir.x * enemy.def.move_speed
 	enemy.velocity.z = dir.z * enemy.def.move_speed
+	_face_dir(dir)
+
+
+func _face_dir(dir: Vector3) -> void:
+	if dir.length_squared() < 0.001:
+		return
+	var flat_target := enemy.global_position + dir
+	flat_target.y = enemy.global_position.y
+	enemy.look_at(flat_target, Vector3.UP)

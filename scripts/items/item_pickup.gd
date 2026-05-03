@@ -70,5 +70,5 @@ func _process(delta: float) -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if body.has_method("take_pickup") and _target == null:
-		monitoring = false
+		set_deferred("monitoring", false)
 		_target = body

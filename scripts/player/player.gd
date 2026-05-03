@@ -92,7 +92,7 @@ func consume_stamina(amount: float) -> bool:
 
 func die() -> void:
 	EventBus.player_died.emit()
-	respawn()
+	get_tree().create_timer(0.6).timeout.connect(respawn)
 
 
 func respawn() -> void:

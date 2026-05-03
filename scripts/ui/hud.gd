@@ -3,6 +3,8 @@ extends CanvasLayer
 
 var _pickup_label: Label
 var _pickup_tween: Tween
+var _death_fade: ColorRect
+var _death_tween: Tween
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -16,8 +18,11 @@ func _ready() -> void:
 
 	_add_stat_bars()
 	_add_pickup_label()
+	_add_death_fade()
 
 	EventBus.item_picked_up.connect(_on_item_picked_up)
+	EventBus.player_died.connect(_on_player_died)
+	EventBus.player_respawned.connect(_on_player_respawned)
 
 
 func _add_stat_bars() -> void:
@@ -83,6 +88,37 @@ func _add_pickup_label() -> void:
 	_pickup_label.add_theme_font_size_override("font_size", 18)
 	_pickup_label.modulate.a = 0.0
 	add_child(_pickup_label)
+
+
+func _add_death_fade() -> void:
+	_death_fade = ColorRect.new()
+	_death_fade.name = "DeathFade"
+	_death_fade.color = Color.BLACK
+	_death_fade.modulate.a = 0.0
+	_death_fade.anchor_left   = 0.0
+	_death_fade.anchor_right  = 1.0
+	_death_fade.anchor_top    = 0.0
+	_death_fade.anchor_bottom = 1.0
+	_death_fade.offset_left   = 0.0
+	_death_fade.offset_right  = 0.0
+	_death_fade.offset_top    = 0.0
+	_death_fade.offset_bottom = 0.0
+	_death_fade.mouse_filter  = Control.MOUSE_FILTER_IGNORE
+	add_child(_death_fade)
+
+
+func _on_player_died() -> void:
+	if _death_tween:
+		_death_tween.kill()
+	_death_tween = create_tween()
+	_death_tween.tween_property(_death_fade, "modulate:a", 1.0, 0.6)
+
+
+func _on_player_respawned() -> void:
+	if _death_tween:
+		_death_tween.kill()
+	_death_tween = create_tween()
+	_death_tween.tween_property(_death_fade, "modulate:a", 0.0, 0.6)
 
 
 func _on_item_picked_up(item_id: StringName, count: int) -> void:
