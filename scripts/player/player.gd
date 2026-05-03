@@ -24,6 +24,7 @@ var _stamina_regen_timer: float = 999.0
 @onready var inventory: Inventory  = $Inventory
 @onready var weapon_mount: Node3D  = $WeaponMount
 @onready var shield_mount: Node3D  = $ShieldMount
+@onready var hurtbox: Area3D       = $Hurtbox
 
 
 func _ready() -> void:
