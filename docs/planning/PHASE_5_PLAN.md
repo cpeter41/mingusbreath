@@ -2,7 +2,7 @@
 
 ## Context
 
-Phases 1–4 shipped: skeleton + autoloads + atomic save (Phase 1), playable character + melee + test island (Phase 2), skill curves + inventory + basic boat (Phase 3), and the combat-depth pass (Phase 4 — note: ground-truth survey shows block/dodge action states, husk enemy AI, and HP/stamina bars are **not yet landed in code**; if Phase 4 work is still outstanding when Phase 5 begins, finish Phase 4 first or note holdover items in the commit). The current dev scene `scenes/dev/test_island.tscn` hardcodes a single 120 m × 120 m heightmap island over a 600 m × 600 m flat water plane and spawns the player at `(0, 15, 0)`.
+Phases 1–4 shipped: skeleton + autoloads + atomic save (Phase 1), playable character + melee + test island (Phase 2), skill curves + inventory + basic boat (Phase 3), and the combat-depth pass (block/dodge action states, husk enemy AI, and HP/stamina bars). The current dev scene `scenes/dev/test_island.tscn` hardcodes a single 120 m × 120 m heightmap island over a 600 m × 600 m flat water plane and spawns the player at `(0, 15, 0)`.
 
 Phase 5 turns the project from "one hand-placed island" into a **multi-island, day/night world** where:
 
