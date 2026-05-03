@@ -13,18 +13,18 @@
 [ext_resource type="Script" uid="uid://cmcuef4yexe0h" path="res://scripts/player/action_states/attack.gd" id="12_ov1oi"]
 [ext_resource type="Script" uid="uid://drdgh25wibco4" path="res://scripts/inventory/inventory.gd" id="13_20koh"]
 [ext_resource type="Script" uid="uid://cqduk17gut6e2" path="res://scripts/player/action_states/block.gd" id="14_blk"]
-[ext_resource type="Script" uid="uid://cx5r2m9lp3kqw" path="res://scripts/player/action_states/dodge.gd" id="15_dodg"]
+[ext_resource type="Script" uid="uid://cx5r2nalp3kqw" path="res://scripts/player/action_states/dodge.gd" id="15_dodg"]
 [ext_resource type="Script" uid="uid://drpg4uaiadcnp" path="res://scripts/combat/hurtbox.gd" id="16_hbox"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
 height = 1.8
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_2"]
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
 radius = 0.4
 height = 1.8
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_2"]
 radius = 0.4
 height = 1.8
 

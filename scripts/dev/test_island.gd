@@ -2,8 +2,8 @@ extends Node3D
 ## Dev sandbox — not shipped. Removed when real spawn flow lands.
 
 const PlayerScene := preload("res://scenes/player/Player.tscn")
-const DummyScene  := preload("res://scenes/ai/TargetDummy.tscn")
-const HuskScene   := preload("res://scenes/ai/Husk.tscn")
+const DummyScene  := preload("res://scenes/enemies/TargetDummy.tscn")
+const HuskScene   := preload("res://scenes/enemies/Husk.tscn")
 const HUDScript   := preload("res://scripts/ui/hud.gd")
 const BoatScript  := preload("res://scripts/ships/boat.gd")
 
@@ -80,18 +80,11 @@ func _spawn_player() -> void:
 
 
 func _spawn_dummies() -> void:
-	# Wait one physics frame so terrain StaticBody3D is registered before raycasting.
 	await get_tree().physics_frame
-	var xz_offsets := [
-		Vector2( 3.0, -3.0),
-		Vector2(-3.0, -3.0),
-		Vector2( 0.0, -6.0),
-	]
-	for xz in xz_offsets:
-		var h := _sample_terrain(xz.x, xz.y)
-		var dummy := DummyScene.instantiate()
-		dummy.position = Vector3(xz.x, h, xz.y)
-		add_child(dummy)
+	var h := _sample_terrain(0.0, -6.0)
+	var dummy := DummyScene.instantiate()
+	dummy.position = Vector3(0.0, h, -6.0)
+	add_child(dummy)
 
 
 func _spawn_husks() -> void:
@@ -139,5 +132,6 @@ func _connect_debug_signals() -> void:
 	)
 	EventBus.enemy_killed.connect(
 		func(enemy_id, _killer):
-			print("[enemy_killed] %s" % enemy_id)
+			#print("[enemy_killed] %s" % enemy_id)
+			pass
 	)
