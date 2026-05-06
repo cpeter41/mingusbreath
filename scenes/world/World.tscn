@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://cssl66b4ed1cs"]
+
+[ext_resource type="Script" uid="uid://c8bn3o2v20yf2" path="res://scripts/world/world_root.gd" id="1_wr"]
+[ext_resource type="Script" uid="uid://clkwfnsyavuqj" path="res://scripts/world/ocean_follower.gd" id="2_of"]
+[ext_resource type="PackedScene" uid="uid://co1cgbo6s2lmu" path="res://scenes/player/Player.tscn" id="3_pl"]
+
+[sub_resource type="StandardMaterial3D" id="WaterMat_1"]
+albedo_color = Color(0.09, 0.28, 0.72, 1)
+
+[sub_resource type="PlaneMesh" id="Plane_1"]
+size = Vector2(4096, 4096)
+subdivide_width = 32
+subdivide_depth = 32
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.45, 0.65, 0.9, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.4, 0.45, 0.5, 1)
+ambient_light_energy = 0.5
+
+[node name="WorldRoot" type="Node3D" unique_id=1574986342]
+script = ExtResource("1_wr")
+
+[node name="IslandContainer" type="Node3D" parent="." unique_id=203679104]
+
+[node name="OceanFollower" type="Node3D" parent="." unique_id=2109022807]
+script = ExtResource("2_of")
+
+[node name="WaterMesh" type="MeshInstance3D" parent="OceanFollower" unique_id=1287942960]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
+material_override = SubResource("WaterMat_1")
+mesh = SubResource("Plane_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=756844716]
+transform = Transform3D(0.86602527, -0.3535535, 0.35355362, 0, 0.7071069, 0.70710665, -0.50000024, -0.6123722, 0.61237246, 0, 0, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="WorldEnv" type="WorldEnvironment" parent="." unique_id=2115614150]
+environment = SubResource("Env_1")
+
+[node name="Player" parent="." unique_id=863874365 instance=ExtResource("3_pl")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)

@@ -4,15 +4,21 @@ extends Node
 
 const SAVE_PATH := "user://save.dat"
 const TEMP_PATH := "user://save.tmp"
-const SCHEMA_VERSION := 1
+const SCHEMA_VERSION := 2
 
 var _saveables: Array[Node] = []
+var _save_disabled: bool = false
 
 func register(node: Node) -> void:
 	if node not in _saveables:
 		_saveables.append(node)
 
+func disable_save() -> void:
+	_save_disabled = true
+
 func save() -> bool:
+	if _save_disabled:
+		return true
 	var payload := {}
 	for n in _saveables:
 		if n.has_method("save_data"):
@@ -41,7 +47,14 @@ func save() -> bool:
 	return true
 
 func load_or_init() -> void:
+	_save_disabled = false
+	for i in range(_saveables.size() - 1, -1, -1):
+		if not is_instance_valid(_saveables[i]):
+			_saveables.remove_at(i)
 	if not FileAccess.file_exists(SAVE_PATH):
+		for n in _saveables:
+			if n.has_method("load_data"):
+				n.load_data({})
 		return
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if f == null:
@@ -64,9 +77,22 @@ func load_or_init() -> void:
 		if n.has_method("load_data") and payload.has(n.name):
 			n.load_data(payload[n.name])
 
+func delete_save() -> void:
+	var d := DirAccess.open("user://")
+	if d == null:
+		return
+	if d.file_exists(SAVE_PATH.get_file()):
+		d.remove(SAVE_PATH.get_file())
+	if d.file_exists(TEMP_PATH.get_file()):
+		d.remove(TEMP_PATH.get_file())
+
 func _migrate(payload: Dictionary, from_version: int) -> Dictionary:
-	# v1 is current. Future migrations chain here, e.g.
-	# if from_version < 2: payload = _v1_to_v2(payload)
 	if from_version > SCHEMA_VERSION:
 		push_warning("SaveSystem: save is from a newer version (%d > %d); attempting to load anyway" % [from_version, SCHEMA_VERSION])
+	if from_version < 2:
+		if not payload.has("IslandDeltaStore"):
+			payload["IslandDeltaStore"] = {}
+		if not payload.has("TimeOfDay"):
+			payload["TimeOfDay"] = {"game_minutes": 480.0}
+		# Player key absent on v1 → load_data not called; fresh-spawn path takes over.
 	return payload

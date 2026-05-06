@@ -4,6 +4,7 @@ const MOUSE_SENSITIVITY := 0.003
 const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
 const SHIELD_SCENE  := preload("res://scenes/weapons/Shield.tscn")
 const RESPAWN_POINT := Vector3(0.0, 15.0, 0.0)
+const BOAT_SPAWN_DIST := 8.0
 
 var max_hp: float      = 100.0
 var max_stamina: float = 150.0
@@ -17,6 +18,11 @@ var is_parrying: bool  = false
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var _stamina_regen_timer: float = 999.0
+var _pending_pos = null  # null = no saved position (cold start)
+var _pending_rot_y: float = 0.0
+var _world_ready: bool = false  # true after _on_world_loaded places the player
+var _save_pos: Vector3 = Vector3.ZERO
+var _save_rot_y: float = 0.0
 
 @onready var camera_pivot: Node3D  = $CameraPivot
 @onready var movementSM: Node      = $MovementStateMachine
@@ -35,6 +41,8 @@ func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	EventBus.player_hp_changed.emit.call_deferred(hp, max_hp)
 	EventBus.player_stamina_changed.emit.call_deferred(stamina, max_stamina)
+	SaveSystem.register(self)
+	EventBus.world_loaded.connect(_on_world_loaded, CONNECT_ONE_SHOT)
 
 
 func _on_inventory_changed() -> void:
@@ -113,6 +121,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		)
 		return
 
+	if event.is_action_pressed("reset_save"):
+		SaveSystem.disable_save()
+		SaveSystem.delete_save()
+		get_tree().reload_current_scene()
+		return
+
+	if not on_boat and event.is_action_pressed("spawn_boat"):
+		_try_spawn_boat()
+		return
+
 	if not on_boat and event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
 		camera_pivot.rotate_x(-event.relative.y * MOUSE_SENSITIVITY)
@@ -140,3 +158,59 @@ func _regen_stamina(delta: float) -> void:
 	if _stamina_regen_timer > 0.5 and stamina < max_stamina:
 		stamina = minf(max_stamina, stamina + 15.0 * delta)
 		EventBus.player_stamina_changed.emit(stamina, max_stamina)
+
+
+func _exit_tree() -> void:
+	if _world_ready:
+		_save_pos = global_position
+		_save_rot_y = rotation.y
+
+
+func save_data() -> Dictionary:
+	if not _world_ready:
+		return {}
+	return {"position": V3Codec.encode(_save_pos), "rotation_y": _save_rot_y}
+
+
+func load_data(d: Dictionary) -> void:
+	if d.has("position"):
+		_pending_pos = V3Codec.decode(d["position"])
+		_pending_rot_y = float(d.get("rotation_y", 0.0))
+
+
+func _try_spawn_boat() -> void:
+	var fwd := Vector3(-global_transform.basis.z.x, 0.0, -global_transform.basis.z.z).normalized()
+	var spawn_pos := global_position + fwd * BOAT_SPAWN_DIST
+	spawn_pos.y = 0.0
+	if WorldStream.get_placement_enclosing(spawn_pos) != null:
+		return
+	if BoatManager._boats.size() > 0:
+		var existing := BoatManager._boats[0] as Boat
+		if is_instance_valid(existing) and existing.is_inside_tree():
+			existing.global_position = spawn_pos
+			existing.rotation.y = rotation.y
+			return
+	var boat := Boat.new()
+	boat.rotation.y = rotation.y
+	get_parent().add_child(boat)
+	boat.global_position = spawn_pos
+	BoatManager.register_boat(boat)
+
+
+func _on_world_loaded() -> void:
+	if _pending_pos != null:
+		global_position = _pending_pos
+		rotation.y = _pending_rot_y
+	else:
+		var starter := IslandRegistry.get_starter_placement()
+		if starter == null:
+			global_position = RESPAWN_POINT
+		else:
+			var inst := WorldStream.active_islands.get(starter.runtime_id, null) as Node3D
+			if inst == null:
+				global_position = RESPAWN_POINT
+			else:
+				var anchor := inst.get_node_or_null("SpawnAnchor") as Node3D
+				global_position = anchor.global_position if anchor != null else RESPAWN_POINT
+	velocity = Vector3.ZERO
+	_world_ready = true

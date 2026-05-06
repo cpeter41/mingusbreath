@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BiomeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/biome_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"forest"
+display_name = "Forest"
+terrain_albedo = Color(0.20, 0.40, 0.18, 1)
+terrain_roughness = 0.85
+foliage_density = 1.0
+fog_tint = Color(1, 1, 1, 0)
+ambient_tint_day = Color(0.9, 1.0, 0.9, 1)
+ambient_tint_night = Color(0.3, 0.4, 0.45, 1)
+day_spawn_table = []
+night_spawn_table = []

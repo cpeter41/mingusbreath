@@ -6,6 +6,8 @@ extends Area3D
 
 var _target: Node3D = null
 var _chase_speed: float = 4.0
+var _source_runtime_id: StringName = &""
+var _source_payload: Dictionary = {}
 
 func _ready() -> void:
 	var mesh_inst := MeshInstance3D.new()
@@ -65,6 +67,8 @@ func _process(delta: float) -> void:
 	global_position += dir * _chase_speed * delta
 	if global_position.distance_to(destination) < 0.2:
 		_target.take_pickup(item_id, count)
+		if _source_runtime_id != &"":
+			WorldStream.get_delta_store().remove_delta_match(_source_runtime_id, &"dropped_item", _source_payload)
 		queue_free()
 
 

@@ -78,7 +78,8 @@ Each is a singleton node loaded at startup. Kept small and orthogonal:
 | `EventBus` | Project-wide signals (`item_picked_up`, `enemy_killed`, `skill_xp_gained`, `station_discovered`, `boss_defeated`, `time_phase_changed`). Systems emit/listen here instead of holding refs to each other. |
 | `SaveSystem` | Snapshot/restore of all persisted state; one slot, atomic write (write-temp-then-rename) |
 | `TimeOfDay` | Game-clock ticking, current phase (dawn/day/dusk/night), drives sun + spawn tables |
-| `WorldStream` | Chunk loader/unloader around player, owns the active chunk grid |
+| `WorldStream` | Island loader/unloader around player (autoload name kept for back-compat; internals are island-streaming) |
+| `IslandRegistry` | Scans `data/islands/*.tres` at boot; computes deterministic island placements from `GameState.world_seed` on demand |
 | `SkillManager` | Tracks per-skill xp/level, applies multipliers, emits level-ups |
 | `InventoryRegistry` | Lookup table of all `ItemDef`s by id (loaded once from `data/items/`) |
 | `DiscoveryLog` | Discovered map regions + discovered crafting stations |
@@ -92,27 +93,63 @@ Rule: autoloads never reach into scenes; scenes call autoloads or emit on EventB
 
 **Goal:** "Huge, contiguous, no loading screens" with reasonable memory use.
 
-- **World seed**: a single 64-bit int. Everything generative (island layout, biome assignment, spawns, station placement, boss locations) derives from it deterministically — never store generated content in the save, only *modifications* to it.
-- **Chunked streaming** in a flat XZ grid. Starting target: **128 m chunks**, active radius **5–7 chunks** around player (tune later by profiling).
-- **Two layers** per chunk:
-  1. **Ocean layer**: a cheap GPU water plane that always exists and just follows the player horizontally — one mesh, animated shader, no per-chunk cost.
-  2. **Island layer**: only chunks whose seed-derived "is-land" mask is non-empty actually generate terrain meshes. Most chunks are empty water, costing nothing.
-- **Island generation pipeline** (per land chunk):
-  1. Sample low-frequency noise to decide if this chunk is part of an island and which island id.
-  2. Heightmap from layered FastNoiseLite (continent + detail).
-  3. Biome assignment from per-island temperature/humidity noise → `BiomeDef` resource.
-  4. Visual mesh: build terrain via Godot's `SurfaceTool` / `ArrayMesh`. Collider: a `HeightMapShape3D` (or trimesh) generated from the same heightmap — the two are complementary, not alternatives.
-  5. Scatter foliage/rocks via deterministic Poisson disk sampling, rendered as `MultiMeshInstance3D` per chunk for draw-call efficiency.
-  6. Place crafting stations and boss spawn anchors deterministically per island.
-- **Modifications layer**: the save records *deltas* per chunk — felled trees, mined rocks (with respawn timestamps), dropped items, killed boss flags. On chunk load, regenerate from seed then apply deltas.
-- **LOD**: distant chunks render only terrain + impostor billboards; near chunks get full foliage + colliders. Colliders only on active radius.
+- **World seed**: a single 64-bit int. Everything generative (island layout, spawns, station placement, boss locations) derives from it deterministically — never store generated content in the save, only *modifications* to it.
 
-**Critical scripts to create:**
-- `globals/world_stream.gd` (autoload)
-- `scripts/world/chunk.gd`
-- `scripts/world/island_generator.gd`
-- `scripts/world/biome_def.gd` (Resource)
-- `scripts/world/foliage_scatter.gd`
+### BiomeDef Schema (`scripts/data/biome_def.gd`, instances in `data/biomes/*.tres`)
+
+```
+id: StringName
+display_name: String
+terrain_albedo: Color
+terrain_roughness: float = 0.85
+foliage_density: float = 1.0                  # reserved — Phase 6+
+fog_tint: Color = Color(1,1,1,0)              # alpha 0 = no override
+ambient_tint_day: Color = Color(1,1,1,1)
+ambient_tint_night: Color = Color(0.4,0.4,0.55,1)
+day_spawn_table: Array[StringName] = []       # reserved — Phase 6+
+night_spawn_table: Array[StringName] = []     # reserved — Phase 6+
+music_stem: AudioStream = null                # reserved — Phase 7+
+```
+
+### IslandDef Schema (`scripts/data/island_def.gd`, instances in `data/islands/*.tres`)
+
+```
+IslandDef Schema (per data/islands/<id>.tres):
+  id: StringName                 # unique
+  display_name: String
+  scene: PackedScene             # scenes/islands/<id>.tscn — Node3D root
+  biome: BiomeDef
+  footprint_radius: float        # metres; used for placement spacing + biome detection
+  placement_weight: float = 1.0  # probability weight when seeded RNG picks islands
+Each scene's root is a Node3D and contains at minimum:
+  - one MeshInstance3D for the terrain (uses biome.terrain_albedo via material_override)
+  - one StaticBody3D + CollisionShape3D for terrain collision
+  - a child Node3D named "SpawnAnchor" indicating safe stand-up position
+  - optional child Node3D named "DeltaRoot" — items respawned from the delta store re-parent here
+```
+
+### Premade-island streaming
+
+`WORLD_SIZE_M = 4096`. `ISLAND_COUNT = 8` (one starter + seven seeded). Islands are authored `.tscn` scenes referenced by `IslandDef` resources. `IslandRegistry` deterministically places islands at world load via seeded RNG with min-distance constraints from `footprint_radius`. `IslandStream` loads each island scene when player ≤ `footprint_radius + LOAD_BUFFER_M` (200 m), unloads at > `footprint_radius + UNLOAD_BUFFER_M` (400 m). The ocean is a single 4096×4096 m flat plane parented to a follower `Node3D` that copies `player.global_position.x` and `z` each frame (y stays at `WATER_Y`). Modifications persist via `IslandDeltaStore` keyed by `island.runtime_id` (stable `StringName` per `(world_seed, slot_index)`).
+
+### IslandStream public API
+
+```
+IslandStream.player_island: IslandPlacement      # nearest enclosing, or null
+IslandStream.active_islands: Dictionary[StringName, Node3D]  # runtime_id → instance
+IslandStream.get_active_biome() -> BiomeDef      # nearest enclosing island's biome, else null (= ocean)
+signal island_loaded(placement: IslandPlacement, instance: Node3D)
+signal island_unloaded(runtime_id: StringName)
+signal world_loaded                              # one-shot, after first batch of islands settles
+```
+
+**Critical scripts:**
+- `globals/world_stream.gd` (autoload — island-streaming internals)
+- `globals/island_registry.gd` (autoload — placement computation)
+- `scripts/world/island_generator.gd` (edit-time only after Phase 5)
+- `scripts/data/biome_def.gd` (Resource)
+- `scripts/data/island_def.gd` (Resource)
+- `scripts/world/island_placer.gd`, `island_delta_store.gd`, `island_placement.gd`
 
 ---
 
@@ -207,6 +244,7 @@ Pure use-based, no XP loss on death. Skills:
 - Drives a `DirectionalLight3D` rotation + `WorldEnvironment` sky/ambient via curves keyed to time.
 - Emits `time_phase_changed` (dawn/day/dusk/night) — spawners and AudioDirector listen.
 - No seasons, no weather (per your call).
+- **Constants**: `minutes_per_real_second = 1.0` (default; 24 real-min per game day). Phase boundaries: dawn=05:00–07:00, day=07:00–18:00, dusk=18:00–20:00, night=20:00–05:00. Sun pitch: -90° at midnight up to +90° at noon, formula: `sun_pitch_deg = -90 + 360 * (fmod(game_minutes, 1440) / 1440)`.
 
 ---
 
@@ -228,9 +266,11 @@ Single slot. Atomic save: write to `save.tmp`, fsync, rename over `save.dat`.
 
 Auto-save on: sleep, fast-travel (none for now, but reserved), quit-to-menu, periodic interval (e.g. every 5 game-minutes).
 
-**Schema versioning**: header `{version: int, seed: int}`. Migrations are functions keyed by version.
+**Schema versioning**: header `{version: int, seed: int}`. Migrations are functions keyed by version. Current `SCHEMA_VERSION = 2`.
 
-**Critical script:** `globals/save_system.gd` + small `Saveable` interface (`save_data() -> Dictionary`, `load_data(d)`) on player/ship/chunk-delta-store.
+**Player position persistence flow**: Player position is restored only after `IslandStream` has loaded the starter island. `WorldStream` emits `EventBus.world_loaded` once after its first-batch synchronous load completes. Player connects to `world_loaded` in `_ready` (`CONNECT_ONE_SHOT`) and on emit either applies a saved position (returning user) or copies `global_position` from the starter island's `SpawnAnchor` child (cold start).
+
+**Critical script:** `globals/save_system.gd` + small `Saveable` interface (`save_data() -> Dictionary`, `load_data(d)`) on player/island-delta-store/time-of-day.
 
 ---
 
