@@ -20,5 +20,3 @@ shape = ExtResource("2_col")
 
 [node name="SpawnAnchor" type="Node3D" parent="."]
 position = Vector3(0, 8, 0)
-
-[node name="DeltaRoot" type="Node3D" parent="."]

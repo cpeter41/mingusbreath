@@ -206,7 +206,7 @@ func _on_world_loaded() -> void:
 		if starter == null:
 			global_position = RESPAWN_POINT
 		else:
-			var inst := WorldStream.active_islands.get(starter.runtime_id, null) as Node3D
+			var inst := WorldStream.get_far_instance(starter.runtime_id)
 			if inst == null:
 				global_position = RESPAWN_POINT
 			else:
