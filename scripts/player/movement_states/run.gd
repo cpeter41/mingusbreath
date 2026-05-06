@@ -7,7 +7,7 @@ func physics_update(delta: float) -> void:
 		movementSM.transition_to("fall")
 		return
 
-	if Input.is_action_just_pressed("jump"):
+	if Controls.jump_just_pressed():
 		if player.consume_stamina(15.0):
 			movementSM.transition_to("jump")
 		return
@@ -17,7 +17,7 @@ func physics_update(delta: float) -> void:
 		movementSM.transition_to("idle")
 		return
 
-	if Input.is_action_pressed("sprint") and player.stamina > 0.0:
+	if Controls.sprint_held() and player.stamina > 0.0:
 		movementSM.transition_to("sprint")
 		return
 

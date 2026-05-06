@@ -9,7 +9,7 @@ var _dodge_dir: Vector3 = Vector3.ZERO
 
 func enter() -> void:
 	_timer = DODGE_DURATION
-	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input := Controls.move_vector()
 	if input != Vector2.ZERO:
 		_dodge_dir = (player.transform.basis * Vector3(input.x, 0.0, input.y)).normalized()
 	else:

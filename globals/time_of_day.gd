@@ -11,12 +11,18 @@ enum Phase { DAWN, DAY, DUSK, NIGHT }
 @export var tint_dusk:  Color = Color(0.90, 0.50, 0.30)
 @export var tint_night: Color = Color(0.15, 0.18, 0.30)
 
+## Above this elevation (in basis.z.y units, 0 = horizon, 1 = zenith)
+## the celestial body shines at full strength. Below 0 it's dark. Linear fade between.
+const HORIZON_FADE := 0.1
+
 var game_minutes: float = 0.0
 var phase: Phase = Phase.DAY
 
 var _sun: DirectionalLight3D = null
 var _moon: DirectionalLight3D = null
 var _env: Environment = null
+var _sun_max_energy: float = 1.0
+var _moon_max_energy: float = 0.15
 
 
 func _ready() -> void:
@@ -25,10 +31,12 @@ func _ready() -> void:
 
 func set_sun(sun: DirectionalLight3D) -> void:
 	_sun = sun
+	_sun_max_energy = sun.light_energy
 
 
 func set_moon(moon: DirectionalLight3D) -> void:
 	_moon = moon
+	_moon_max_energy = moon.light_energy
 
 
 func set_world_environment(env: Environment) -> void:
@@ -36,7 +44,7 @@ func set_world_environment(env: Environment) -> void:
 
 
 func _process(delta: float) -> void:
-	var rate := minutes_per_real_second * (TIME_ACCEL_MULT if Input.is_key_pressed(KEY_T) else 1.0)
+	var rate := minutes_per_real_second * (TIME_ACCEL_MULT if Controls.time_accel_held() else 1.0)
 	game_minutes += delta * rate
 	var m := fmod(game_minutes, MINUTES_PER_DAY)
 
@@ -47,11 +55,19 @@ func _process(delta: float) -> void:
 
 	if _sun != null:
 		_sun.rotation.x = deg_to_rad(90.0 * cos(TAU * m / MINUTES_PER_DAY))
+		_sun.light_energy = _sun_max_energy * _horizon_factor(_sun)
 	if _moon != null:
 		_moon.rotation.x = _sun.rotation.x + PI
+		_moon.light_energy = _moon_max_energy * _horizon_factor(_moon)
 
 	if _env != null:
 		_env.ambient_light_color = _compute_tint(m)
+
+
+## 1.0 when the body is above HORIZON_FADE elevation, 0.0 at/below horizon, linear in between.
+func _horizon_factor(light: DirectionalLight3D) -> float:
+	var elevation: float = light.global_transform.basis.z.y
+	return clampf(elevation / HORIZON_FADE, 0.0, 1.0)
 
 
 func _compute_tint(m: float) -> Color:

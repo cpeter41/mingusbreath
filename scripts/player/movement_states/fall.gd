@@ -13,7 +13,7 @@ func physics_update(delta: float) -> void:
 
 	if player.is_on_floor():
 		movementSM.transition_to(
-			"sprint" if Input.is_action_pressed("sprint") and _get_move_dir() != Vector3.ZERO
+			"sprint" if Controls.sprint_held() and _get_move_dir() != Vector3.ZERO
 			else "run" if _get_move_dir() != Vector3.ZERO
 			else "idle"
 		)

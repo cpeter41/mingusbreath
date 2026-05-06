@@ -33,6 +33,8 @@ func _ready() -> void:
 	_build_deck_spawn()
 	_build_mount_zone()
 	_build_camera_rig()
+	Controls.interact_pressed.connect(_on_interact)
+	Controls.mouse_look.connect(_on_mouse_look)
 
 func _build_hull() -> void:
 	_hull_mesh = MeshInstance3D.new()
@@ -84,24 +86,23 @@ func _build_camera_rig() -> void:
 	_camera.current = false
 	_spring_arm.add_child(_camera)
 
-func _input(event: InputEvent) -> void:
-	# E toggles mount/dismount regardless of camera direction
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_E:
-		if mounted:
-			_dismount()
-		else:
-			var player := get_tree().get_first_node_in_group("player")
-			if player != null and _mount_zone.overlaps_body(player) and player.is_on_floor():
-				_mount(player)
+func _on_interact() -> void:
+	if mounted:
+		_dismount()
 		return
+	var player := get_tree().get_first_node_in_group("player")
+	if player != null and _mount_zone.overlaps_body(player) and player.is_on_floor():
+		_mount(player)
 
-	# Mouse look while mounted
-	if mounted and event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		_camera_pivot.rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
-		_spring_arm.rotate_x(-event.relative.y * MOUSE_SENSITIVITY)
-		_spring_arm.rotation.x = clamp(
-			_spring_arm.rotation.x, deg_to_rad(-50.0), deg_to_rad(20.0)
-		)
+
+func _on_mouse_look(delta: Vector2) -> void:
+	if not mounted:
+		return
+	_camera_pivot.rotate_y(-delta.x * MOUSE_SENSITIVITY)
+	_spring_arm.rotate_x(-delta.y * MOUSE_SENSITIVITY)
+	_spring_arm.rotation.x = clamp(
+		_spring_arm.rotation.x, deg_to_rad(-50.0), deg_to_rad(20.0)
+	)
 
 func _mount(player: Node) -> void:
 	_player = player
@@ -114,7 +115,7 @@ func _mount(player: Node) -> void:
 	_camera_pivot.rotation.y = old_yaw - rotation.y
 	_spring_arm.rotation.x = player.camera_pivot.rotation.x
 	_camera.current = true
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	Controls.capture_mouse()
 
 func _dismount() -> void:
 	if _player != null:
@@ -135,8 +136,8 @@ func _physics_process(delta: float) -> void:
 		throttle = move_toward(throttle, 0.0, accel * delta)
 		return
 
-	var t_in := Input.get_action_strength("throttle_up") - Input.get_action_strength("throttle_down")
-	var r_in := Input.get_action_strength("rudder_left") - Input.get_action_strength("rudder_right")
+	var t_in := Controls.throttle_axis()
+	var r_in := Controls.rudder_axis()
 
 	throttle = move_toward(throttle, t_in, accel * delta)
 
