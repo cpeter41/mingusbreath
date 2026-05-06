@@ -41,10 +41,7 @@ func _try_first_batch() -> void:
 	if _player == null or _container == null or _first_batch_done:
 		return
 	for p in IslandRegistry.placements:
-		var placement := p as IslandPlacement
-		var dist: float = _player.global_position.distance_to(placement.position)
-		if dist <= placement.def.footprint_radius + LOAD_BUFFER_M:
-			_load_island(placement)
+		_load_island(p as IslandPlacement)
 	_first_batch_done = true
 	EventBus.world_loaded.emit()
 
@@ -54,18 +51,6 @@ func _process(_dt: float) -> void:
 		_player = null
 	if _player == null or _container == null or not _first_batch_done:
 		return
-
-	for p in IslandRegistry.placements:
-		var placement := p as IslandPlacement
-		var dist: float = _player.global_position.distance_to(placement.position)
-		var load_t: float = placement.def.footprint_radius + LOAD_BUFFER_M
-		var unload_t: float = placement.def.footprint_radius + UNLOAD_BUFFER_M
-
-		if dist <= load_t and not active_islands.has(placement.runtime_id):
-			_load_island(placement)
-		elif dist > unload_t and active_islands.has(placement.runtime_id):
-			_unload_island(placement.runtime_id)
-
 	_update_biome()
 
 

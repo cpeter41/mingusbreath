@@ -1,6 +1,7 @@
 extends Node
 
 const MINUTES_PER_DAY := 1440.0
+const TIME_ACCEL_MULT := 20.0
 
 enum Phase { DAWN, DAY, DUSK, NIGHT }
 
@@ -14,6 +15,7 @@ var game_minutes: float = 0.0
 var phase: Phase = Phase.DAY
 
 var _sun: DirectionalLight3D = null
+var _moon: DirectionalLight3D = null
 var _env: Environment = null
 
 
@@ -25,12 +27,17 @@ func set_sun(sun: DirectionalLight3D) -> void:
 	_sun = sun
 
 
+func set_moon(moon: DirectionalLight3D) -> void:
+	_moon = moon
+
+
 func set_world_environment(env: Environment) -> void:
 	_env = env
 
 
 func _process(delta: float) -> void:
-	game_minutes += delta * minutes_per_real_second
+	var rate := minutes_per_real_second * (TIME_ACCEL_MULT if Input.is_key_pressed(KEY_T) else 1.0)
+	game_minutes += delta * rate
 	var m := fmod(game_minutes, MINUTES_PER_DAY)
 
 	var new_phase := _phase_for(m)
@@ -40,6 +47,8 @@ func _process(delta: float) -> void:
 
 	if _sun != null:
 		_sun.rotation.x = deg_to_rad(90.0 * cos(TAU * m / MINUTES_PER_DAY))
+	if _moon != null:
+		_moon.rotation.x = _sun.rotation.x + PI
 
 	if _env != null:
 		_env.ambient_light_color = _compute_tint(m)

@@ -6,6 +6,7 @@ var _pickup_tween: Tween
 var _death_fade: ColorRect
 var _death_tween: Tween
 var _coords_label: Label
+var _biome_label: Label
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -24,8 +25,10 @@ func _ready() -> void:
 	_add_pickup_label()
 	_add_death_fade()
 	_add_coords_label()
+	_add_biome_label()
 
 	EventBus.item_picked_up.connect(_on_item_picked_up)
+	EventBus.biome_entered.connect(_on_biome_entered)
 	EventBus.player_died.connect(_on_player_died)
 	EventBus.player_respawned.connect(_on_player_respawned)
 
@@ -103,6 +106,22 @@ func _add_coords_label() -> void:
 	add_child(_coords_label)
 
 
+func _add_biome_label() -> void:
+	_biome_label = Label.new()
+	_biome_label.name = "BiomeLabel"
+	_biome_label.anchor_left   = 0.0
+	_biome_label.anchor_right  = 0.0
+	_biome_label.anchor_top    = 0.0
+	_biome_label.anchor_bottom = 0.0
+	_biome_label.offset_left   = 148.0
+	_biome_label.offset_right  = 500.0
+	_biome_label.offset_top    = 92.0
+	_biome_label.offset_bottom = 114.0
+	_biome_label.add_theme_font_size_override("font_size", 14)
+	_biome_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.75))
+	add_child(_biome_label)
+
+
 func _add_pickup_label() -> void:
 	_pickup_label = Label.new()
 	_pickup_label.name = "PickupLabel"
@@ -148,6 +167,10 @@ func _on_player_respawned() -> void:
 		_death_tween.kill()
 	_death_tween = create_tween()
 	_death_tween.tween_property(_death_fade, "modulate:a", 0.0, 0.6)
+
+
+func _on_biome_entered(biome: BiomeDef) -> void:
+	_biome_label.text = biome.display_name
 
 
 func _on_item_picked_up(item_id: StringName, count: int) -> void:

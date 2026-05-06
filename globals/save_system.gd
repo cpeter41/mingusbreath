@@ -52,6 +52,9 @@ func load_or_init() -> void:
 		if not is_instance_valid(_saveables[i]):
 			_saveables.remove_at(i)
 	if not FileAccess.file_exists(SAVE_PATH):
+		for n in _saveables:
+			if n.has_method("load_data"):
+				n.load_data({})
 		return
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if f == null:
