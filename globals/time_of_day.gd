@@ -39,7 +39,7 @@ func _process(delta: float) -> void:
 		EventBus.time_phase_changed.emit(phase)
 
 	if _sun != null:
-		_sun.rotation.x = deg_to_rad(-90.0 + 360.0 * (m / MINUTES_PER_DAY))
+		_sun.rotation.x = deg_to_rad(90.0 * cos(TAU * m / MINUTES_PER_DAY))
 
 	if _env != null:
 		_env.ambient_light_color = _compute_tint(m)

@@ -28,6 +28,11 @@ func set_player(p: Node3D) -> void:
 
 
 func set_container(c: Node3D) -> void:
+	# Reset stale autoload state from any previous scene load.
+	_player = null
+	_first_batch_done = false
+	_last_active_biome = null
+	active_islands.clear()
 	_container = c
 	_try_first_batch()
 
@@ -45,6 +50,8 @@ func _try_first_batch() -> void:
 
 
 func _process(_dt: float) -> void:
+	if _player != null and (not is_instance_valid(_player) or not _player.is_inside_tree()):
+		_player = null
 	if _player == null or _container == null or not _first_batch_done:
 		return
 
@@ -94,6 +101,8 @@ func _update_biome() -> void:
 
 
 func get_active_biome() -> BiomeDef:
+	if _player != null and (not is_instance_valid(_player) or not _player.is_inside_tree()):
+		_player = null
 	if _player == null:
 		return _get_ocean_biome()
 	for p in IslandRegistry.placements:

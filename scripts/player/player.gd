@@ -4,6 +4,7 @@ const MOUSE_SENSITIVITY := 0.003
 const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
 const SHIELD_SCENE  := preload("res://scenes/weapons/Shield.tscn")
 const RESPAWN_POINT := Vector3(0.0, 15.0, 0.0)
+const BOAT_SPAWN_DIST := 8.0
 
 var max_hp: float      = 100.0
 var max_stamina: float = 150.0
@@ -120,6 +121,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		)
 		return
 
+	if event.is_action_pressed("reset_save"):
+		SaveSystem.disable_save()
+		SaveSystem.delete_save()
+		get_tree().reload_current_scene()
+		return
+
+	if not on_boat and event.is_action_pressed("spawn_boat"):
+		_try_spawn_boat()
+		return
+
 	if not on_boat and event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
 		camera_pivot.rotate_x(-event.relative.y * MOUSE_SENSITIVITY)
@@ -165,6 +176,25 @@ func load_data(d: Dictionary) -> void:
 	if d.has("position"):
 		_pending_pos = V3Codec.decode(d["position"])
 		_pending_rot_y = float(d.get("rotation_y", 0.0))
+
+
+func _try_spawn_boat() -> void:
+	var fwd := Vector3(-global_transform.basis.z.x, 0.0, -global_transform.basis.z.z).normalized()
+	var spawn_pos := global_position + fwd * BOAT_SPAWN_DIST
+	spawn_pos.y = 0.0
+	if WorldStream.get_placement_enclosing(spawn_pos) != null:
+		return
+	if BoatManager._boats.size() > 0:
+		var existing := BoatManager._boats[0] as Boat
+		if is_instance_valid(existing) and existing.is_inside_tree():
+			existing.global_position = spawn_pos
+			existing.rotation.y = rotation.y
+			return
+	var boat := Boat.new()
+	boat.rotation.y = rotation.y
+	get_parent().add_child(boat)
+	boat.global_position = spawn_pos
+	BoatManager.register_boat(boat)
 
 
 func _on_world_loaded() -> void:

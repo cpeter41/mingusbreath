@@ -7,12 +7,18 @@ const TEMP_PATH := "user://save.tmp"
 const SCHEMA_VERSION := 2
 
 var _saveables: Array[Node] = []
+var _save_disabled: bool = false
 
 func register(node: Node) -> void:
 	if node not in _saveables:
 		_saveables.append(node)
 
+func disable_save() -> void:
+	_save_disabled = true
+
 func save() -> bool:
+	if _save_disabled:
+		return true
 	var payload := {}
 	for n in _saveables:
 		if n.has_method("save_data"):
@@ -41,6 +47,10 @@ func save() -> bool:
 	return true
 
 func load_or_init() -> void:
+	_save_disabled = false
+	for i in range(_saveables.size() - 1, -1, -1):
+		if not is_instance_valid(_saveables[i]):
+			_saveables.remove_at(i)
 	if not FileAccess.file_exists(SAVE_PATH):
 		return
 	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
@@ -63,6 +73,15 @@ func load_or_init() -> void:
 	for n in _saveables:
 		if n.has_method("load_data") and payload.has(n.name):
 			n.load_data(payload[n.name])
+
+func delete_save() -> void:
+	var d := DirAccess.open("user://")
+	if d == null:
+		return
+	if d.file_exists(SAVE_PATH.get_file()):
+		d.remove(SAVE_PATH.get_file())
+	if d.file_exists(TEMP_PATH.get_file()):
+		d.remove(TEMP_PATH.get_file())
 
 func _migrate(payload: Dictionary, from_version: int) -> Dictionary:
 	if from_version > SCHEMA_VERSION:
