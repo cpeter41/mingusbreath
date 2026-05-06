@@ -14,6 +14,9 @@ func _ready() -> void:
 	var toast := SkillToast.new()
 	add_child(toast)
 
+	var banner := BiomeBanner.new()
+	add_child(banner)
+
 	var inv_screen := InventoryScreen.new()
 	add_child(inv_screen)
 

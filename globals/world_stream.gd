@@ -77,7 +77,6 @@ func _load_island(placement: IslandPlacement) -> void:
 	_apply_deltas_to_instance(instance, placement, _delta_store.get_deltas_for(placement.runtime_id))
 	active_islands[placement.runtime_id] = instance
 	EventBus.island_loaded.emit(placement, instance)
-	print("[WorldStream] island_loaded: ", placement.runtime_id)
 
 
 func _unload_island(runtime_id: StringName) -> void:
@@ -85,12 +84,26 @@ func _unload_island(runtime_id: StringName) -> void:
 	inst.queue_free()
 	active_islands.erase(runtime_id)
 	EventBus.island_unloaded.emit(runtime_id)
-	print("[WorldStream] island_unloaded: ", runtime_id)
 
 
-## Completed in Step 14 — wires dropped_item deltas to ItemPickup instances.
-func _apply_deltas_to_instance(_instance: Node3D, _placement: IslandPlacement, _deltas: Dictionary) -> void:
-	pass
+func _apply_deltas_to_instance(instance: Node3D, placement: IslandPlacement, deltas: Dictionary) -> void:
+	var dropped: Array = deltas.get(&"dropped_item", [])
+	if dropped.is_empty():
+		return
+	var delta_root := instance.get_node_or_null("DeltaRoot") as Node3D
+	if delta_root == null:
+		return
+	for payload in dropped:
+		if typeof(payload) != TYPE_DICTIONARY:
+			continue
+		var pickup := ItemPickup.new()
+		pickup.item_id = StringName(payload.get("item_id", &""))
+		pickup.count = int(payload.get("count", 1))
+		pickup._source_runtime_id = placement.runtime_id
+		pickup._source_payload = payload
+		delta_root.add_child(pickup)
+		var local_arr: Array = payload.get("local_position", [0.0, 0.0, 0.0])
+		pickup.position = V3Codec.decode(local_arr)
 
 
 func _update_biome() -> void:
