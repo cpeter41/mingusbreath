@@ -139,7 +139,7 @@ func _on_mouse_look(delta: Vector2) -> void:
 	rotate_y(-delta.x * MOUSE_SENSITIVITY)
 	camera_pivot.rotate_x(-delta.y * MOUSE_SENSITIVITY)
 	camera_pivot.rotation.x = clamp(
-		camera_pivot.rotation.x, deg_to_rad(-70.0), deg_to_rad(20.0)
+		camera_pivot.rotation.x, deg_to_rad(-89.0), deg_to_rad(89.0)
 	)
 
 
