@@ -1,15 +1,23 @@
 extends Node
 
 const MINUTES_PER_DAY := 1440.0
-const TIME_ACCEL_MULT := 20.0
+const TIME_ACCEL_MULT := 40.0
 
 enum Phase { DAWN, DAY, DUSK, NIGHT }
 
 @export var minutes_per_real_second: float = 1.0
+
 @export var tint_dawn:  Color = Color(1.0,  0.70, 0.40)
 @export var tint_day:   Color = Color(1.0,  1.00, 0.95)
 @export var tint_dusk:  Color = Color(0.90, 0.50, 0.30)
 @export var tint_night: Color = Color(0.15, 0.18, 0.30)
+
+@export var sky_dawn: Color = Color(0.99, 0.78, 0.41)
+@export var sky_day: Color = Color(0.32, 0.67, 0.85)
+@export var sky_dusk: Color = Color(0.90, 0.50, 0.30)
+@export var sky_night: Color = Color(0.025, 0.033, 0.08)
+
+
 
 ## Above this elevation (in basis.z.y units, 0 = horizon, 1 = zenith)
 ## the celestial body shines at full strength. Below 0 it's dark. Linear fade between.
@@ -44,8 +52,8 @@ func set_world_environment(env: Environment) -> void:
 
 
 func _process(delta: float) -> void:
-	var rate := minutes_per_real_second * (TIME_ACCEL_MULT if Controls.time_accel_held() else 1.0)
-	game_minutes += delta * rate
+	var time_rate := minutes_per_real_second * (TIME_ACCEL_MULT if Controls.time_accel_held() else 1.0)
+	game_minutes += delta * time_rate
 	var m := fmod(game_minutes, MINUTES_PER_DAY)
 
 	var new_phase := _phase_for(m)
@@ -59,9 +67,9 @@ func _process(delta: float) -> void:
 	if _moon != null:
 		_moon.rotation.x = _sun.rotation.x + PI
 		_moon.light_energy = _moon_max_energy * _horizon_factor(_moon)
-
 	if _env != null:
 		_env.ambient_light_color = _compute_tint(m)
+		_env.background_color = _compute_sky(m)
 
 
 ## 1.0 when the body is above HORIZON_FADE elevation, 0.0 at/below horizon, linear in between.
@@ -70,17 +78,32 @@ func _horizon_factor(light: DirectionalLight3D) -> float:
 	return clampf(elevation / HORIZON_FADE, 0.0, 1.0)
 
 
-func _compute_tint(m: float) -> Color:
-	if m < 300.0:
-		return tint_night
-	if m < 420.0:
-		return tint_dawn.lerp(tint_day, (m - 300.0) / 120.0)
-	if m < 1080.0:
-		return tint_day
-	if m < 1200.0:
-		return tint_dusk.lerp(tint_night, (m - 1080.0) / 120.0)
-	return tint_night
+## Sky color blends between sky_night→sky_dawn→sky_day→sky_dusk→sky_night,
+## with centerpoints at m=1440 ≡ 0 (night), 360 (dawn), 720 (day), 1080 (dusk).
+func _compute_sky(m: float) -> Color:
+	var blend_value := sin((m / 1440) * PI)
+	var m_norm := m / MINUTES_PER_DAY	# normalized m (0.0-1.0)
+	const day_phase_len := (MINUTES_PER_DAY / 4.0)
+	#print(m, ", %.3f" % blend_value)
+	if m_norm < 0.25:
+		return sky_night.lerp(sky_dawn, blend_value)
+	if m_norm < 0.5:
+		return sky_dawn.lerp(sky_day, (m - day_phase_len) / day_phase_len)
+	if m_norm < 0.75:
+		return sky_day.lerp(sky_dusk, (m - (2.0 * day_phase_len)) / day_phase_len)
+	return sky_dusk.lerp(sky_night, (m - (3.0 * day_phase_len)) / day_phase_len)
 
+
+func _compute_tint(m: float) -> Color:
+	#if m < 360.0:
+		#return tint_night
+	#if m < 720.0:
+		#return tint_dawn.lerp(tint_day, (m - 360.0) / 120.0)
+	#if m < 1080.0:
+		#return tint_day
+	#if m < 1440.0:
+		#return tint_dusk.lerp(tint_night, (m - 1440.0) / 120.0)
+	return tint_day
 
 func _phase_for(min_in_day: float) -> Phase:
 	if min_in_day >= 5 * 60 and min_in_day < 7 * 60:
