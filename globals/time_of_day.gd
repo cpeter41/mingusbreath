@@ -12,13 +12,6 @@ enum Phase { DAWN, DAY, DUSK, NIGHT }
 @export var tint_dusk:  Color = Color(0.90, 0.50, 0.30)
 @export var tint_night: Color = Color(0.15, 0.18, 0.30)
 
-@export var sky_dawn: Color = Color(0.99, 0.78, 0.41)
-@export var sky_day: Color = Color(0.32, 0.67, 0.85)
-@export var sky_dusk: Color = Color(0.90, 0.50, 0.30)
-@export var sky_night: Color = Color(0.025, 0.033, 0.08)
-
-
-
 ## Above this elevation (in basis.z.y units, 0 = horizon, 1 = zenith)
 ## the celestial body shines at full strength. Below 0 it's dark. Linear fade between.
 const HORIZON_FADE := 0.1
@@ -69,7 +62,6 @@ func _process(delta: float) -> void:
 		_moon.light_energy = _moon_max_energy * _horizon_factor(_moon)
 	if _env != null:
 		_env.ambient_light_color = _compute_tint(m)
-		_env.background_color = _compute_sky(m)
 
 
 ## 1.0 when the body is above HORIZON_FADE elevation, 0.0 at/below horizon, linear in between.
@@ -78,32 +70,15 @@ func _horizon_factor(light: DirectionalLight3D) -> float:
 	return clampf(elevation / HORIZON_FADE, 0.0, 1.0)
 
 
-## Sky color blends between sky_night→sky_dawn→sky_day→sky_dusk→sky_night,
-## with centerpoints at m=1440 ≡ 0 (night), 360 (dawn), 720 (day), 1080 (dusk).
-func _compute_sky(m: float) -> Color:
-	var blend_value := sin((m / 1440) * PI)
-	var m_norm := m / MINUTES_PER_DAY	# normalized m (0.0-1.0)
-	const day_phase_len := (MINUTES_PER_DAY / 4.0)
-	#print(m, ", %.3f" % blend_value)
-	if m_norm < 0.25:
-		return sky_night.lerp(sky_dawn, blend_value)
-	if m_norm < 0.5:
-		return sky_dawn.lerp(sky_day, (m - day_phase_len) / day_phase_len)
-	if m_norm < 0.75:
-		return sky_day.lerp(sky_dusk, (m - (2.0 * day_phase_len)) / day_phase_len)
-	return sky_dusk.lerp(sky_night, (m - (3.0 * day_phase_len)) / day_phase_len)
-
-
-func _compute_tint(m: float) -> Color:
-	#if m < 360.0:
-		#return tint_night
-	#if m < 720.0:
-		#return tint_dawn.lerp(tint_day, (m - 360.0) / 120.0)
-	#if m < 1080.0:
-		#return tint_day
-	#if m < 1440.0:
-		#return tint_dusk.lerp(tint_night, (m - 1440.0) / 120.0)
-	return tint_day
+## Ambient tint follows sun elevation (drives indirect light to match sky shader).
+func _compute_tint(_m: float) -> Color:
+	if _sun == null:
+		return tint_day
+	var sun_y: float = _sun.global_transform.basis.z.y
+	var day_w   := clampf((sun_y + 0.05) / 0.30, 0.0, 1.0)
+	var night_w := clampf((-0.05 - sun_y) / 0.25, 0.0, 1.0)
+	var dusk_w  := clampf(1.0 - day_w - night_w, 0.0, 1.0)
+	return tint_day * day_w + tint_dusk * dusk_w + tint_night * night_w
 
 func _phase_for(min_in_day: float) -> Phase:
 	if min_in_day >= 5 * 60 and min_in_day < 7 * 60:
