@@ -36,6 +36,11 @@ signal inventory_toggled
 signal mouse_look(delta: Vector2)
 
 
+func _ready() -> void:
+	# Keep input routing alive while the tree is paused (e.g. inventory open).
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(PAUSE):
 		pause_pressed.emit()

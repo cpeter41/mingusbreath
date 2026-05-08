@@ -36,8 +36,6 @@ var _save_rot_y: float = 0.0
 func _ready() -> void:
 	add_to_group("player")
 	inventory.changed.connect(_on_inventory_changed)
-	inventory.add(&"sword", 1)
-	inventory.add(&"shield", 1)
 	Controls.capture_mouse()
 	Controls.pause_pressed.connect(_on_pause_pressed)
 	Controls.reset_pressed.connect(_on_reset_pressed)
@@ -124,6 +122,8 @@ func _on_pause_pressed() -> void:
 func _on_reset_pressed() -> void:
 	SaveSystem.disable_save()
 	SaveSystem.delete_save()
+	get_tree().paused = false
+	Controls.capture_mouse()
 	get_tree().reload_current_scene()
 
 
@@ -198,6 +198,12 @@ func _try_spawn_boat() -> void:
 
 
 func _on_world_loaded() -> void:
+	# Grant starter loadout once. Idempotent so it survives save/load round-trips.
+	if inventory.count_of(&"sword") == 0:
+		inventory.add(&"sword", 1)
+	if inventory.count_of(&"shield") == 0:
+		inventory.add(&"shield", 1)
+
 	if _pending_pos != null:
 		global_position = _pending_pos
 		rotation.y = _pending_rot_y
