@@ -1,8 +1,8 @@
 class_name Sun
 extends DirectionalLight3D
 
-const DISC_DIST    := 900.0
-const DISC_SIZE    := Vector2(80.0, 80.0)
+const DISC_DIST    := 3000.0
+const DISC_SIZE    := Vector2(500.0, 500.0)
 const HORIZON_FADE := 0.1
 
 var _max_energy: float = 1.0
@@ -32,7 +32,7 @@ func _update_disc() -> void:
 	if cam == null:
 		return
 	var dir := global_transform.basis.z.normalized()
-	_disc.visible = dir.y > -0.05
+	_disc.visible = dir.y > -0.1
 	_disc.global_position = cam.global_position + dir * DISC_DIST
 
 
