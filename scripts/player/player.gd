@@ -3,7 +3,7 @@ extends CharacterBody3D
 const MOUSE_SENSITIVITY := 0.003
 const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
 const SHIELD_SCENE  := preload("res://scenes/weapons/Shield.tscn")
-const RESPAWN_POINT := Vector3(0.0, 15.0, 0.0)
+const RESPAWN_FALLBACK_Y := 15.0
 const BOAT_SPAWN_DIST := 8.0
 
 var max_hp: float      = 100.0
@@ -106,7 +106,7 @@ func die() -> void:
 
 
 func respawn() -> void:
-	global_position = RESPAWN_POINT
+	global_position = _mainland_spawn_point()
 	hp = max_hp
 	stamina = max_stamina
 	_stamina_regen_timer = 999.0
@@ -208,15 +208,18 @@ func _on_world_loaded() -> void:
 		global_position = _pending_pos
 		rotation.y = _pending_rot_y
 	else:
-		var starter := IslandRegistry.get_starter_placement()
-		if starter == null:
-			global_position = RESPAWN_POINT
-		else:
-			var inst := WorldStream.get_far_instance(starter.runtime_id)
-			if inst == null:
-				global_position = RESPAWN_POINT
-			else:
-				var anchor := inst.get_node_or_null("SpawnAnchor") as Node3D
-				global_position = anchor.global_position if anchor != null else RESPAWN_POINT
+		global_position = _mainland_spawn_point()
 	velocity = Vector3.ZERO
 	_world_ready = true
+
+
+func _mainland_spawn_point() -> Vector3:
+	var mp := IslandRegistry.get_mainland_placement()
+	if mp == null:
+		return Vector3(0.0, RESPAWN_FALLBACK_Y, 0.0)
+	var inst := WorldStream.get_far_instance(mp.runtime_id)
+	if inst != null:
+		var anchor := inst.get_node_or_null("SpawnAnchor") as Node3D
+		if anchor != null:
+			return anchor.global_position
+	return mp.position + Vector3(0.0, RESPAWN_FALLBACK_Y, 0.0)

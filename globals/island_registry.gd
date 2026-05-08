@@ -3,7 +3,7 @@
 extends Node
 
 const ISLANDS_DIR := "res://data/islands/"
-const WORLD_SIZE_M := 4096.0
+const WORLD_SIZE_M := 8192.0
 const ISLAND_COUNT := 8
 
 var _defs: Array = []  # Array[IslandDef]
@@ -34,11 +34,17 @@ func _load_defs() -> void:
 ## Idempotent — safe to call again after seed change.
 func compute_placements() -> void:
 	placements = IslandPlacer.place(_defs, GameState.world_seed, WORLD_SIZE_M, ISLAND_COUNT)
-
-
-func get_starter_placement() -> IslandPlacement:
+	print("[IslandRegistry] %d placements (seed=%d, world=%dm):" % [placements.size(), GameState.world_seed, int(WORLD_SIZE_M)])
 	for p in placements:
-		if p.def.id == IslandPlacer.STARTER_DEF_ID:
+		var pl := p as IslandPlacement
+		print("  slot %d  %-22s  pos=(%7.1f, %7.1f)  r=%.0f" % [
+			pl.slot_index, String(pl.def.id), pl.position.x, pl.position.z, pl.def.footprint_radius
+		])
+
+
+func get_mainland_placement() -> IslandPlacement:
+	for p in placements:
+		if p.def.id == IslandPlacer.MAINLAND_DEF_ID:
 			return p
 	return null
 

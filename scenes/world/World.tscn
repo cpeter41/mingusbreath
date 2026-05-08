@@ -6,6 +6,8 @@
 [ext_resource type="Shader" uid="uid://bny1bg5pqaokg" path="res://shaders/sky.gdshader" id="4_sky"]
 [ext_resource type="Script" uid="uid://dam77dntoofdf" path="res://scripts/world/sun.gd" id="5_sun"]
 [ext_resource type="Script" uid="uid://bf5ntyxrsaici" path="res://scripts/world/moon.gd" id="6_moon"]
+[ext_resource type="Script" path="res://scripts/world/world_border.gd" id="7_wb"]
+[ext_resource type="Shader" path="res://shaders/world_border.gdshader" id="8_bs"]
 
 [sub_resource type="StandardMaterial3D" id="WaterMat_1"]
 albedo_color = Color(0.09, 0.28, 0.72, 1)
@@ -31,6 +33,21 @@ shader_parameter/sun_glow_strength = 0.6
 [sub_resource type="Sky" id="Sky_1"]
 sky_material = SubResource("SkyMat_1")
 
+[sub_resource type="ShaderMaterial" id="BorderShaderMat_1"]
+shader = ExtResource("8_bs")
+
+[sub_resource type="BoxMesh" id="BorderBoxMeshNS_1"]
+size = Vector3(8200, 80, 4)
+
+[sub_resource type="BoxShape3D" id="BorderBoxShapeNS_1"]
+size = Vector3(8200, 80, 4)
+
+[sub_resource type="BoxMesh" id="BorderBoxMeshEW_1"]
+size = Vector3(4, 80, 8200)
+
+[sub_resource type="BoxShape3D" id="BorderBoxShapeEW_1"]
+size = Vector3(4, 80, 8200)
+
 [sub_resource type="Environment" id="Env_1"]
 background_mode = 2
 background_color = Color(0.45, 0.65, 0.9, 1)
@@ -43,6 +60,49 @@ ambient_light_energy = 0.5
 script = ExtResource("1_wr")
 
 [node name="IslandContainer" type="Node3D" parent="." unique_id=203679104]
+
+[node name="WorldBorder" type="Node3D" parent="."]
+script = ExtResource("7_wb")
+
+[node name="WallNorth" type="StaticBody3D" parent="WorldBorder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 30, -4096)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldBorder/WallNorth"]
+shape = SubResource("BorderBoxShapeNS_1")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WorldBorder/WallNorth"]
+mesh = SubResource("BorderBoxMeshNS_1")
+material_override = SubResource("BorderShaderMat_1")
+
+[node name="WallSouth" type="StaticBody3D" parent="WorldBorder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 30, 4096)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldBorder/WallSouth"]
+shape = SubResource("BorderBoxShapeNS_1")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WorldBorder/WallSouth"]
+mesh = SubResource("BorderBoxMeshNS_1")
+material_override = SubResource("BorderShaderMat_1")
+
+[node name="WallEast" type="StaticBody3D" parent="WorldBorder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4096, 30, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldBorder/WallEast"]
+shape = SubResource("BorderBoxShapeEW_1")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WorldBorder/WallEast"]
+mesh = SubResource("BorderBoxMeshEW_1")
+material_override = SubResource("BorderShaderMat_1")
+
+[node name="WallWest" type="StaticBody3D" parent="WorldBorder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4096, 30, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldBorder/WallWest"]
+shape = SubResource("BorderBoxShapeEW_1")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WorldBorder/WallWest"]
+mesh = SubResource("BorderBoxMeshEW_1")
+material_override = SubResource("BorderShaderMat_1")
 
 [node name="OceanFollower" type="Node3D" parent="." unique_id=2109022807]
 script = ExtResource("2_of")
