@@ -72,3 +72,4 @@ func load_data(d: Dictionary) -> void:
 	slots.clear()
 	for entry in d.get("slots", []):
 		slots.append({"item_id": StringName(entry["item_id"]), "count": int(entry["count"])})
+	changed.emit()

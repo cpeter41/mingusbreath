@@ -22,18 +22,6 @@ func _ready() -> void:
 	TimeOfDay.set_sun($Sun as DirectionalLight3D)
 	TimeOfDay.set_world_environment(($WorldEnv as WorldEnvironment).environment)
 
-	var disc := Sun.new()
-	($Sun as DirectionalLight3D).add_child(disc)
-
-	var moon_light := DirectionalLight3D.new()
-	moon_light.name = "Moon"
-	moon_light.light_color = Color(0.7, 0.8, 1.0)
-	moon_light.light_energy = 0.15
-	moon_light.shadow_enabled = false
-	add_child(moon_light)
-	moon_light.add_child(Moon.new())
-	TimeOfDay.set_moon(moon_light)
-
 	var hud := HUD.new()
 	hud.name = "PlayerHUD"
 	add_child(hud)

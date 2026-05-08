@@ -27,10 +27,7 @@ func _drop_loot() -> void:
 
 	var placement: IslandPlacement = WorldStream.get_placement_enclosing(global_position)
 	if placement != null:
-		var inst: Node3D = WorldStream.active_islands.get(placement.runtime_id, null)
-		var delta_root: Node3D = null
-		if inst != null:
-			delta_root = inst.get_node_or_null("DeltaRoot") as Node3D
+		var delta_root: Node3D = WorldStream.get_delta_root(placement.runtime_id)
 		if delta_root != null:
 			# Phase 5 placements use rotation_y = 0, so plain subtraction == local position.
 			var local_pos := global_position - placement.position

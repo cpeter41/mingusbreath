@@ -1,14 +1,18 @@
-[gd_resource type="Resource" script_class="IslandDef" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="IslandDef" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/island_def.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/islands/island_desert_01.tscn" id="2"]
 [ext_resource type="Resource" script_class="BiomeDef" path="res://data/biomes/desert.tres" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/islands/_tiers/island_mid_empty.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/islands/_tiers/island_near_empty.tscn" id="5"]
 
 [resource]
 script = ExtResource("1")
 id = &"island_desert_01"
 display_name = "Desert"
 scene = ExtResource("2")
+mid_scene = ExtResource("4")
+near_scene = ExtResource("5")
 biome = ExtResource("3")
 footprint_radius = 100.0
 placement_weight = 1.0

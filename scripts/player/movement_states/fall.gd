@@ -11,9 +11,13 @@ func physics_update(delta: float) -> void:
 		player.velocity.x = move_toward(player.velocity.x, dir.x * SPEED, AIR_ACCEL * delta)
 		player.velocity.z = move_toward(player.velocity.z, dir.z * SPEED, AIR_ACCEL * delta)
 
+	if player.global_position.y <= OceanFollower.WATER_Y:
+		movementSM.transition_to("swim")
+		return
+
 	if player.is_on_floor():
 		movementSM.transition_to(
-			"sprint" if Input.is_action_pressed("sprint") and _get_move_dir() != Vector3.ZERO
+			"sprint" if Controls.sprint_held() and _get_move_dir() != Vector3.ZERO
 			else "run" if _get_move_dir() != Vector3.ZERO
 			else "idle"
 		)

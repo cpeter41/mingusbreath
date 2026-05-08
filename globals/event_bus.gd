@@ -17,4 +17,6 @@ signal player_parried(attacker: Node)
 signal world_loaded
 signal island_loaded(placement: IslandPlacement, instance: Node3D)
 signal island_unloaded(runtime_id: StringName)
+signal island_tier_loaded(runtime_id: StringName, tier: StringName, instance: Node3D)
+signal island_tier_unloaded(runtime_id: StringName, tier: StringName)
 signal biome_entered(biome: BiomeDef)

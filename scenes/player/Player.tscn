@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://jl6bmgysx3sm" path="res://scripts/player/movement_states/sprint.gd" id="6_sprint"]
 [ext_resource type="Script" uid="uid://tyhr0nfre37n" path="res://scripts/player/movement_states/jump.gd" id="7_jump"]
 [ext_resource type="Script" uid="uid://bd2fxngxunliv" path="res://scripts/player/movement_states/fall.gd" id="8_fall"]
+[ext_resource type="Script" path="res://scripts/player/movement_states/swim.gd" id="9_swim"]
 [ext_resource type="Script" uid="uid://ctshxxwb1ito4" path="res://scripts/player/actionSM.gd" id="10_180ig"]
 [ext_resource type="Script" uid="uid://be2yccai2wdfa" path="res://scripts/player/action_states/idle.gd" id="11_20koh"]
 [ext_resource type="Script" uid="uid://cmcuef4yexe0h" path="res://scripts/player/action_states/attack.gd" id="12_ov1oi"]
@@ -71,6 +72,9 @@ script = ExtResource("7_jump")
 
 [node name="Fall" type="Node" parent="MovementStateMachine" unique_id=274319939]
 script = ExtResource("8_fall")
+
+[node name="Swim" type="Node" parent="MovementStateMachine"]
+script = ExtResource("9_swim")
 
 [node name="ActionStateMachine" type="Node" parent="." unique_id=1403715199]
 script = ExtResource("10_180ig")

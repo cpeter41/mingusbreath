@@ -12,6 +12,7 @@ func _ready() -> void:
 	layer = 20
 	visible = false
 	_build_ui()
+	Controls.inventory_toggled.connect(_toggle)
 
 func _build_ui() -> void:
 	var backdrop := ColorRect.new()
@@ -101,19 +102,14 @@ func _show_tooltip(desc: String, anchor: Control) -> void:
 func _hide_tooltip() -> void:
 	_tooltip.visible = false
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_TAB:
-			_toggle()
-
 func _toggle() -> void:
 	visible = !visible
 	get_tree().paused = visible
 	if visible:
 		_rebuild_slots()
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		Controls.release_mouse()
 	else:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		Controls.capture_mouse()
 
 static func _ceil_to_grid(n: int, cols: int) -> int:
 	return int(ceil(float(n) / cols)) * cols

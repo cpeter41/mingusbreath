@@ -36,9 +36,11 @@ var _save_rot_y: float = 0.0
 func _ready() -> void:
 	add_to_group("player")
 	inventory.changed.connect(_on_inventory_changed)
-	inventory.add(&"sword", 1)
-	inventory.add(&"shield", 1)
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	Controls.capture_mouse()
+	Controls.pause_pressed.connect(_on_pause_pressed)
+	Controls.reset_pressed.connect(_on_reset_pressed)
+	Controls.spawn_boat_pressed.connect(_on_spawn_boat_pressed)
+	Controls.mouse_look.connect(_on_mouse_look)
 	EventBus.player_hp_changed.emit.call_deferred(hp, max_hp)
 	EventBus.player_stamina_changed.emit.call_deferred(stamina, max_stamina)
 	SaveSystem.register(self)
@@ -113,34 +115,32 @@ func respawn() -> void:
 	EventBus.player_respawned.emit()
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
-		var captured := Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED
-		Input.set_mouse_mode(
-			Input.MOUSE_MODE_VISIBLE if captured else Input.MOUSE_MODE_CAPTURED
-		)
+func _on_pause_pressed() -> void:
+	Controls.toggle_mouse_capture()
+
+
+func _on_reset_pressed() -> void:
+	SaveSystem.disable_save()
+	SaveSystem.delete_save()
+	get_tree().paused = false
+	Controls.capture_mouse()
+	get_tree().reload_current_scene()
+
+
+func _on_spawn_boat_pressed() -> void:
+	if on_boat:
 		return
+	_try_spawn_boat()
 
-	if event.is_action_pressed("reset_save"):
-		SaveSystem.disable_save()
-		SaveSystem.delete_save()
-		get_tree().reload_current_scene()
+
+func _on_mouse_look(delta: Vector2) -> void:
+	if on_boat:
 		return
-
-	if not on_boat and event.is_action_pressed("spawn_boat"):
-		_try_spawn_boat()
-		return
-
-	if not on_boat and event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
-		camera_pivot.rotate_x(-event.relative.y * MOUSE_SENSITIVITY)
-		camera_pivot.rotation.x = clamp(
-			camera_pivot.rotation.x, deg_to_rad(-70.0), deg_to_rad(20.0)
-		)
-
-	if not on_boat:
-		movementSM.handle_input(event)
-	actionSM.handle_input(event)
+	rotate_y(-delta.x * MOUSE_SENSITIVITY)
+	camera_pivot.rotate_x(-delta.y * MOUSE_SENSITIVITY)
+	camera_pivot.rotation.x = clamp(
+		camera_pivot.rotation.x, deg_to_rad(-89.0), deg_to_rad(89.0)
+	)
 
 
 func _physics_process(delta: float) -> void:
@@ -198,6 +198,12 @@ func _try_spawn_boat() -> void:
 
 
 func _on_world_loaded() -> void:
+	# Grant starter loadout once. Idempotent so it survives save/load round-trips.
+	if inventory.count_of(&"sword") == 0:
+		inventory.add(&"sword", 1)
+	if inventory.count_of(&"shield") == 0:
+		inventory.add(&"shield", 1)
+
 	if _pending_pos != null:
 		global_position = _pending_pos
 		rotation.y = _pending_rot_y
@@ -206,7 +212,7 @@ func _on_world_loaded() -> void:
 		if starter == null:
 			global_position = RESPAWN_POINT
 		else:
-			var inst := WorldStream.active_islands.get(starter.runtime_id, null) as Node3D
+			var inst := WorldStream.get_far_instance(starter.runtime_id)
 			if inst == null:
 				global_position = RESPAWN_POINT
 			else:

@@ -12,7 +12,7 @@ func _apply_gravity(delta: float) -> void:
 		player.velocity.y -= player.gravity * delta
 
 func _get_move_dir() -> Vector3:
-	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input := Controls.move_vector()
 	return (player.transform.basis * Vector3(input.x, 0.0, input.y)).normalized()
 
 func _decelerate(delta: float) -> void:
