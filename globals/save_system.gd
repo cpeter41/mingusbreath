@@ -4,7 +4,7 @@ extends Node
 
 const SAVE_PATH := "user://save.dat"
 const TEMP_PATH := "user://save.tmp"
-const SCHEMA_VERSION := 2
+const SCHEMA_VERSION := 3
 
 var _saveables: Array[Node] = []
 var _save_disabled: bool = false
@@ -95,4 +95,6 @@ func _migrate(payload: Dictionary, from_version: int) -> Dictionary:
 		if not payload.has("TimeOfDay"):
 			payload["TimeOfDay"] = {"game_minutes": 480.0}
 		# Player key absent on v1 → load_data not called; fresh-spawn path takes over.
+	# v2→v3: boat velocity fields added to BoatManager save; BoatManager.load_data
+	# handles missing keys via bd.has(), so no payload rewrite is needed here.
 	return payload

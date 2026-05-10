@@ -11,7 +11,8 @@ func physics_update(delta: float) -> void:
 		player.velocity.x = move_toward(player.velocity.x, dir.x * SPEED, AIR_ACCEL * delta)
 		player.velocity.z = move_toward(player.velocity.z, dir.z * SPEED, AIR_ACCEL * delta)
 
-	if player.global_position.y <= OceanFollower.WATER_Y:
+	var p := player.global_position
+	if p.y <= Ocean.get_height(p.x, p.z, Ocean.time):
 		movementSM.transition_to("swim")
 		return
 

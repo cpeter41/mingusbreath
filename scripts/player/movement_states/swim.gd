@@ -2,24 +2,18 @@ extends MovementState
 
 const SWIM_SPEED      := 3.5
 const SWIM_ACCEL      := 8.0
-const BOB_FREQ        := 1.6
-const BOB_AMPLITUDE   := 0.12
-const SPRING_K        := 14.0
-const DAMPING         := 5.0
+const SPRING_K        := 20.0
+const DAMPING         := 9.0
 const SURFACE_OFFSET  := -1.0
 const SURFACE_EPSILON := 0.05
 const WATER_JUMP_VELOCITY := 6.0
 
-var _t: float = 0.0
-
 
 func enter() -> void:
-	_t = 0.0
+	pass
 
 
 func physics_update(delta: float) -> void:
-	_t += delta
-
 	if player.is_on_floor():
 		var dir_in := _get_move_dir()
 		movementSM.transition_to(
@@ -29,14 +23,15 @@ func physics_update(delta: float) -> void:
 		)
 		return
 
-	var target_y := OceanFollower.WATER_Y + sin(_t * BOB_FREQ) * BOB_AMPLITUDE + SURFACE_OFFSET
+	var p := player.global_position
+	var target_y := Ocean.get_height(p.x, p.z, Ocean.time) + SURFACE_OFFSET
 
 	if Controls.jump_just_pressed() and player.consume_stamina(15.0):
 		movementSM.transition_to("jump")
 		player.velocity.y = WATER_JUMP_VELOCITY
 		return
 
-	var dy := target_y - player.global_position.y
+	var dy := target_y - p.y
 	player.velocity.y += (SPRING_K * dy - DAMPING * player.velocity.y) * delta
 
 	var dir := _get_move_dir()
