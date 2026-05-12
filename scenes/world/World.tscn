@@ -6,14 +6,15 @@
 [ext_resource type="Shader" uid="uid://bny1bg5pqaokg" path="res://shaders/sky.gdshader" id="4_sky"]
 [ext_resource type="Script" uid="uid://dam77dntoofdf" path="res://scripts/world/sun.gd" id="5_sun"]
 [ext_resource type="Script" uid="uid://bf5ntyxrsaici" path="res://scripts/world/moon.gd" id="6_moon"]
+[ext_resource type="Shader" uid="uid://yd5h2vf9kc3zb" path="res://shaders/water.gdshader" id="7_water"]
 
-[sub_resource type="StandardMaterial3D" id="WaterMat_1"]
-albedo_color = Color(0.09, 0.28, 0.72, 1)
+[sub_resource type="ShaderMaterial" id="WaterMat_1"]
+shader = ExtResource("7_water")
 
 [sub_resource type="PlaneMesh" id="Plane_1"]
 size = Vector2(4096, 4096)
-subdivide_width = 32
-subdivide_depth = 32
+subdivide_width = 512
+subdivide_depth = 512
 
 [sub_resource type="ShaderMaterial" id="SkyMat_1"]
 shader = ExtResource("4_sky")
@@ -48,7 +49,7 @@ script = ExtResource("1_wr")
 script = ExtResource("2_of")
 
 [node name="WaterMesh" type="MeshInstance3D" parent="OceanFollower" unique_id=1287942960]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 material_override = SubResource("WaterMat_1")
 mesh = SubResource("Plane_1")
 

@@ -1,24 +1,25 @@
 class_name Boat
-extends CharacterBody3D
+extends RigidBody3D
 
-const HULL_VISUAL_SIZE   := Vector3(2.0, 0.6, 5.0)
-const HULL_COLLIDER_SIZE := Vector3(2.0, 1.4, 5.0)
-const MOUNT_RADIUS := 3.5
+const HULL_VISUAL_SIZE   := Vector3(3.5, 0.6, 8.0)
+const HULL_COLLIDER_SIZE := Vector3(3.5, 1.4, 8.0)
+const MOUNT_RADIUS := 5.5
 const MOUSE_SENSITIVITY := 0.003
 
-@export var max_speed: float = 12.0
-@export var accel: float = 1.5            # throttle ramp rate per second (in -1..+1 units)
-@export var turn_rate_deg: float = 45.0
-@export var water_y: float = 0.0
+const MAX_THRUST        := 6000.0
+const MAX_RUDDER_TORQUE := 8000.0
+const RUDDER_MIN_SPEED  := 0.5    # m/s — below this, rudder authority is zero
+const RUDDER_FULL_SPEED := 6.0    # m/s — above this, full authority
 
-# Pinned-Y note: setting position.y = water_y after move_and_slide will fight
-# the slide if the boat hits a slope. Acceptable here (water is flat).
-# Seam to fix when buoyancy + waves land in Phase 8.
+@export var accel: float = 1.5    # throttle ramp rate per second (in -1..+1 units)
 
 var throttle: float = 0.0
 var mounted: bool = false
 var _player: Node = null
-var _mount_rotation_offset: float = 0.0
+var _yaw_input: float = 0.0       # accumulated mouse yaw, world-relative offset from boat heading
+var _buoyancy: Buoyancy = null
+var _player_col_layer: int = 0
+var _player_col_mask: int = 0
 
 var _hull_mesh: MeshInstance3D
 var _mount_zone: Area3D
@@ -28,11 +29,17 @@ var _spring_arm: SpringArm3D
 var _camera: Camera3D
 
 func _ready() -> void:
+	mass = 500.0
+	linear_damp = 1.5
+	angular_damp = 5.0
+	gravity_scale = 1.0
+	can_sleep = false
 	collision_mask = 9  # layer 1 (terrain) + layer 8 (shore wall)
 	_build_hull()
 	_build_deck_spawn()
 	_build_mount_zone()
 	_build_camera_rig()
+	_setup_buoyancy()
 	Controls.interact_pressed.connect(_on_interact)
 	Controls.mouse_look.connect(_on_mouse_look)
 
@@ -50,20 +57,20 @@ func _build_hull() -> void:
 	var shape := BoxShape3D.new()
 	shape.size = HULL_COLLIDER_SIZE
 	col.shape = shape
-	# Drop collider so its top stays flush with the visual hull — extra depth hangs below the waterline.
+	# Drop collider so its top stays flush with the visual hull — extra depth hangs below waterline.
 	col.position.y = (HULL_VISUAL_SIZE.y - HULL_COLLIDER_SIZE.y) * 0.5
 	add_child(col)
 
 func _build_deck_spawn() -> void:
 	_deck_spawn = Node3D.new()
 	_deck_spawn.name = "DeckSpawn"
-	_deck_spawn.position = Vector3(0.0, HULL_VISUAL_SIZE.y * 0.5 + 0.0, 0.0)  # top-center of hull
+	_deck_spawn.position = Vector3(0.0, HULL_VISUAL_SIZE.y * 0.5 + 0.0, 0.0)
 	add_child(_deck_spawn)
 
 func _build_mount_zone() -> void:
 	_mount_zone = Area3D.new()
 	_mount_zone.collision_layer = 0
-	_mount_zone.collision_mask = 1   # detect player on default layer 1
+	_mount_zone.collision_mask = 1
 	var col := CollisionShape3D.new()
 	var shape := SphereShape3D.new()
 	shape.radius = MOUNT_RADIUS
@@ -86,6 +93,18 @@ func _build_camera_rig() -> void:
 	_camera.current = false
 	_spring_arm.add_child(_camera)
 
+func _setup_buoyancy() -> void:
+	_buoyancy = Buoyancy.new()
+	_buoyancy.hull_points = [
+		Vector3(-1.75, -0.7, -4.0),
+		Vector3( 1.75, -0.7, -4.0),
+		Vector3(-1.75, -0.7,  4.0),
+		Vector3( 1.75, -0.7,  4.0),
+	]
+	_buoyancy.per_point_max_force = (mass * 9.81 / 4.0) * 2.0
+	_buoyancy.submersion_scale = HULL_COLLIDER_SIZE.y * 0.5
+	add_child(_buoyancy)
+
 func _on_interact() -> void:
 	if mounted:
 		_dismount()
@@ -94,35 +113,44 @@ func _on_interact() -> void:
 	if player != null and _mount_zone.overlaps_body(player) and player.is_on_floor():
 		_mount(player)
 
-
 func _on_mouse_look(delta: Vector2) -> void:
 	if not mounted:
 		return
-	_camera_pivot.rotate_y(-delta.x * MOUSE_SENSITIVITY)
+	_yaw_input -= delta.x * MOUSE_SENSITIVITY
 	_spring_arm.rotate_x(-delta.y * MOUSE_SENSITIVITY)
 	_spring_arm.rotation.x = clamp(
 		_spring_arm.rotation.x, deg_to_rad(-50.0), deg_to_rad(20.0)
 	)
 
+func _process(_delta: float) -> void:
+	if not mounted:
+		return
+	# Override pivot's inherited transform so camera yaws with boat heading + mouse, never rolls.
+	_camera_pivot.global_position = global_position + Vector3(0, 1.6, 0)
+	_camera_pivot.global_rotation = Vector3(0, global_rotation.y + _yaw_input, 0)
+
 func _mount(player: Node) -> void:
 	_player = player
 	mounted = true
-	_mount_rotation_offset = 0.0
-	var old_yaw: float = player.rotation.y
-	player.rotation.y = rotation.y
-	player.global_position = _deck_spawn.global_position
+	_yaw_input = 0.0
+	_player_col_layer = player.collision_layer
+	_player_col_mask  = player.collision_mask
+	player.collision_layer = 0
+	player.collision_mask  = 0
+	player.global_transform = _deck_spawn.global_transform
 	player.on_boat = true
-	_camera_pivot.rotation.y = old_yaw - rotation.y
+	_camera_pivot.global_rotation = Vector3(0, global_rotation.y, 0)
 	_spring_arm.rotation.x = player.camera_pivot.rotation.x
 	_camera.current = true
 	Controls.capture_mouse()
 
 func _dismount() -> void:
 	if _player != null:
-		# Restore player camera angle from boat camera before switching back
-		_player.rotation.y = rotation.y + _camera_pivot.rotation.y
-		_player.camera_pivot.rotation.x = _spring_arm.rotation.x
 		_player.global_position = _deck_spawn.global_position
+		_player.global_rotation = Vector3(0, global_rotation.y + _yaw_input, 0)
+		_player.camera_pivot.rotation.x = _spring_arm.rotation.x
+		_player.collision_layer = _player_col_layer
+		_player.collision_mask  = _player_col_mask
 		_player.velocity = Vector3.ZERO
 		_player.on_boat = false
 	_camera.current = false
@@ -132,26 +160,23 @@ func _dismount() -> void:
 
 func _physics_process(delta: float) -> void:
 	if not mounted:
-		velocity = Vector3.ZERO
 		throttle = move_toward(throttle, 0.0, accel * delta)
 		return
 
 	var t_in := Controls.throttle_axis()
 	var r_in := Controls.rudder_axis()
-
 	throttle = move_toward(throttle, t_in, accel * delta)
 
-	if absf(throttle) > 0.05:
-		rotate_y(deg_to_rad(turn_rate_deg) * r_in * delta)
-
 	var fwd := -global_transform.basis.z
-	velocity = fwd * throttle * max_speed
-	velocity.y = 0.0
+	apply_central_force(fwd * throttle * MAX_THRUST)
 
-	move_and_slide()
-	# Soft Y restore: lets terrain push the boat up momentarily so collision response
-	# can redirect XZ velocity, instead of being stomped by a hard `position.y = water_y`.
-	position.y = lerp(position.y, water_y, 0.4)
-	if _player != null:
-		_player.global_position = _deck_spawn.global_position
-		_player.rotation.y = rotation.y + _mount_rotation_offset
+	var fwd_speed := absf(linear_velocity.dot(fwd))
+	var rudder_authority := clampf(
+		(fwd_speed - RUDDER_MIN_SPEED) / (RUDDER_FULL_SPEED - RUDDER_MIN_SPEED),
+		0.0, 1.0
+	)
+	apply_torque(Vector3.UP * (r_in * MAX_RUDDER_TORQUE * rudder_authority))
+
+	if mounted and _player != null:
+		_player.global_transform = _deck_spawn.global_transform
+		_player.velocity = Vector3.ZERO

@@ -7,8 +7,6 @@ const HuskScene   := preload("res://scenes/enemies/Husk.tscn")
 const HUDScript   := preload("res://scripts/ui/hud.gd")
 const BoatScript  := preload("res://scripts/ships/boat.gd")
 
-const WATER_Y := -0.15
-
 func _ready() -> void:
 	_add_lighting()
 	_build_island()
@@ -59,7 +57,7 @@ func _add_water() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.09, 0.28, 0.72)
 	water.material_override = mat
-	water.position.y = WATER_Y
+	water.position.y = Ocean.WATER_BASE_Y
 	add_child(water)
 
 
@@ -128,8 +126,7 @@ func _spawn_hud() -> void:
 func _spawn_boat() -> void:
 	var boat := BoatScript.new()
 	boat.name = "Boat"
-	boat.water_y = WATER_Y
-	boat.position = Vector3(62.0, WATER_Y, 0.0)
+	boat.position = Vector3(62.0, Ocean.WATER_BASE_Y, 0.0)
 	add_child(boat)
 
 

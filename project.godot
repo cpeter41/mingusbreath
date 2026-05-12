@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 [autoload]
 
 EventBus="*res://globals/event_bus.gd"
+Ocean="*res://globals/ocean.gd"
 SaveSystem="*res://globals/save_system.gd"
 GameState="*res://globals/game_state.gd"
 TimeOfDay="*res://globals/time_of_day.gd"
