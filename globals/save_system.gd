@@ -71,6 +71,13 @@ func load_or_init() -> void:
 		return
 	var header: Dictionary = blob["header"]
 	var version := int(header.get("version", 0))
+	if version != SCHEMA_VERSION:
+		push_warning("SaveSystem: save version %d != %d, wiping for cold start" % [version, SCHEMA_VERSION])
+		delete_save()
+		for n in _saveables:
+			if n.has_method("load_data"):
+				n.load_data({})
+		return
 	var payload: Dictionary = blob["payload"]
 	payload = _migrate(payload, version)
 	for n in _saveables:

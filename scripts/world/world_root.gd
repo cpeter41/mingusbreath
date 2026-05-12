@@ -7,7 +7,7 @@ var _autosave_timer: float = 0.0
 
 
 func _ready() -> void:
-	# Strict order — do not reorder.
+	# Strict order — do not reorder.+
 	SaveSystem.load_or_init()
 	IslandRegistry.compute_placements()
 

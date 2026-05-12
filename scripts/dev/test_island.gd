@@ -5,7 +5,7 @@ const PlayerScene := preload("res://scenes/player/Player.tscn")
 const DummyScene  := preload("res://scenes/enemies/TargetDummy.tscn")
 const HuskScene   := preload("res://scenes/enemies/Husk.tscn")
 const HUDScript   := preload("res://scripts/ui/hud.gd")
-const BoatScript  := preload("res://scripts/ships/boat.gd")
+const BoatScene   := preload("res://scenes/ships/Boat.tscn")
 
 func _ready() -> void:
 	_add_lighting()
@@ -40,7 +40,7 @@ func _build_island() -> void:
 
 	var shore := StaticBody3D.new()
 	shore.name = "ShoreWall"
-	shore.collision_layer = 8  # boat-only layer; player mask 1 won't detect it
+	shore.collision_layer = CollisionLayers.SHORE_WALL  # boat-only; player mask doesn't include this bit
 	shore.collision_mask = 0
 	var shore_col := CollisionShape3D.new()
 	shore_col.shape = data["shore_wall"]
@@ -57,7 +57,7 @@ func _add_water() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.09, 0.28, 0.72)
 	water.material_override = mat
-	water.position.y = Ocean.WATER_BASE_Y
+	water.position.y = OceanFollower.WATER_Y
 	add_child(water)
 
 
@@ -112,7 +112,7 @@ func _sample_terrain(x: float, z: float) -> float:
 	var query := PhysicsRayQueryParameters3D.create(
 		Vector3(x, 50.0, z), Vector3(x, -10.0, z)
 	)
-	query.collision_mask = 1  # terrain StaticBody3D is on default layer 1
+	query.collision_mask = CollisionLayers.WORLD
 	var result := space.intersect_ray(query)
 	return result.position.y if result else 0.0
 
@@ -124,9 +124,10 @@ func _spawn_hud() -> void:
 
 
 func _spawn_boat() -> void:
-	var boat := BoatScript.new()
+	var boat := BoatScene.instantiate() as Boat
 	boat.name = "Boat"
-	boat.position = Vector3(62.0, Ocean.WATER_BASE_Y, 0.0)
+	boat.water_y = OceanFollower.WATER_Y
+	boat.position = Vector3(62.0, OceanFollower.WATER_Y, 0.0)
 	add_child(boat)
 
 

@@ -1,3 +1,6 @@
+## Concrete states (idle.gd, attack.gd, etc.) deliberately omit class_name.
+## They are loaded by their child node name in the scene tree, not by global symbol,
+## so giving them class_name would just pollute the global namespace.
 class_name StateMachine
 extends Node
 

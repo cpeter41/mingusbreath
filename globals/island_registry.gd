@@ -3,7 +3,7 @@
 extends Node
 
 const ISLANDS_DIR := "res://data/islands/"
-const WORLD_SIZE_M := 4096.0
+const WORLD_SIZE_M := 8192.0
 const ISLAND_COUNT := 8
 
 var _defs: Array = []  # Array[IslandDef]
@@ -36,9 +36,9 @@ func compute_placements() -> void:
 	placements = IslandPlacer.place(_defs, GameState.world_seed, WORLD_SIZE_M, ISLAND_COUNT)
 
 
-func get_starter_placement() -> IslandPlacement:
+func get_mainland_placement() -> IslandPlacement:
 	for p in placements:
-		if p.def.id == IslandPlacer.STARTER_DEF_ID:
+		if p.def.id == IslandPlacer.MAINLAND_DEF_ID:
 			return p
 	return null
 

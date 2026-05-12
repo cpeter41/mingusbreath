@@ -1,11 +1,11 @@
 class_name IslandPlacer
 
 const ISLAND_SPACING_BUFFER_M := 80.0
-const STARTER_DEF_ID := &"island_meadows_01"
+const MAINLAND_DEF_ID := &"island_mainland_01"
 
 ## Deterministic rejection-sampling placement.
-## Slot 0 = starter island, always pinned to world origin.
-## Slots 1..N pick defs by weight then draw random positions.
+## Slot 0 = mainland, pinned to top-right corner (+X, -Z).
+## Slots 1..N pick defs by weight then draw random positions, avoiding mainland and borders.
 static func place(
 		defs: Array,
 		world_seed: int,
@@ -15,42 +15,48 @@ static func place(
 
 	var placements: Array = []
 
-	# Find starter def.
-	var starter_def: IslandDef = null
+	# Find mainland def.
+	var mainland_def: IslandDef = null
 	for d in defs:
-		if d.id == STARTER_DEF_ID:
-			starter_def = d
+		if d.id == MAINLAND_DEF_ID:
+			mainland_def = d
 			break
-	if starter_def == null:
-		push_error("IslandPlacer: no IslandDef with id '%s' found in defs" % STARTER_DEF_ID)
+	if mainland_def == null:
+		push_error("IslandPlacer: no IslandDef with id '%s' found in defs" % MAINLAND_DEF_ID)
 		return placements
 
-	# Slot 0 — starter pinned to origin.
-	var starter := IslandPlacement.new()
-	starter.def = starter_def
-	starter.position = Vector3.ZERO
-	starter.rotation_y = 0.0
-	starter.slot_index = 0
-	starter.runtime_id = IslandRuntimeId.compute(world_seed, 0, starter_def.id)
-	placements.append(starter)
-
 	var half := world_size_m * 0.5
+
+	# Slot 0 — mainland pinned to top-right corner.
+	var mainland_inset := mainland_def.footprint_radius + ISLAND_SPACING_BUFFER_M
+	var mainland := IslandPlacement.new()
+	mainland.def = mainland_def
+	mainland.position = Vector3(half - mainland_inset, 0.0, -(half - mainland_inset))
+	mainland.rotation_y = 0.0
+	mainland.slot_index = 0
+	mainland.runtime_id = IslandRuntimeId.compute(world_seed, 0, mainland_def.id)
+	placements.append(mainland)
 
 	for slot in range(1, island_count):
 		var rng := RandomNumberGenerator.new()
 		rng.seed = world_seed ^ 0xA1B2C3 ^ slot
 
-		# Weighted pick of def for this slot.
+		# Weighted pick of def for this slot. Mainland is excluded by weight=0.
 		var chosen_def := _pick_weighted(defs, rng)
 		if chosen_def == null:
 			push_warning("IslandPlacer: slot %d — no defs available, skipping" % slot)
 			continue
 
+		# Keep islands well clear of the world border walls.
+		var edge_inset := chosen_def.footprint_radius + ISLAND_SPACING_BUFFER_M
+		var lo := -half + edge_inset
+		var hi :=  half - edge_inset
+
 		# Rejection sampling for position.
 		var placed := false
 		for _attempt in range(max_attempts):
-			var cx := rng.randf_range(-half, half)
-			var cz := rng.randf_range(-half, half)
+			var cx := rng.randf_range(lo, hi)
+			var cz := rng.randf_range(lo, hi)
 			var candidate := Vector3(cx, 0.0, cz)
 
 			if _too_close(candidate, chosen_def.footprint_radius, placements):
@@ -81,10 +87,13 @@ static func _pick_weighted(defs: Array, rng: RandomNumberGenerator) -> IslandDef
 	var roll: float = rng.randf_range(0.0, total)
 	var acc: float = 0.0
 	for d in defs:
-		acc += (d as IslandDef).placement_weight
+		var w: float = (d as IslandDef).placement_weight
+		if w <= 0.0:
+			continue
+		acc += w
 		if roll <= acc:
 			return d as IslandDef
-	return defs[-1] as IslandDef
+	return null
 
 
 static func _too_close(candidate: Vector3, radius: float, placements: Array) -> bool:

@@ -7,8 +7,8 @@ extends Area3D
 
 func _ready() -> void:
 	monitoring = false      # enabled only during active swing window
-	collision_layer = 2
-	collision_mask  = 4     # detects layer 4 (hurtboxes)
+	collision_layer = CollisionLayers.HITBOX
+	collision_mask  = CollisionLayers.HURTBOX
 	area_entered.connect(_on_area_entered)
 
 func _on_area_entered(area: Area3D) -> void:

@@ -57,7 +57,7 @@ func _try_first_batch() -> void:
 	_first_batch_done = true
 	EventBus.world_loaded.emit()
 	# Immediately resolve mid/near tiers for the player's spawn position.
-	_update_tiers()
+	_update_tiers_and_biome()
 
 
 func _process(_dt: float) -> void:
@@ -65,16 +65,21 @@ func _process(_dt: float) -> void:
 		_player = null
 	if _player == null or _container == null or not _first_batch_done:
 		return
-	_update_tiers()
-	_update_biome()
+	_update_tiers_and_biome()
 
 
-func _update_tiers() -> void:
+# Walks placements once, doing tier load/unload and biome enclosure in one pass.
+func _update_tiers_and_biome() -> void:
 	var ppos: Vector3 = _player.global_position
+	var enclosing_biome: BiomeDef = null
 	for p in IslandRegistry.placements:
 		var placement := p as IslandPlacement
 		var dist: float = ppos.distance_to(placement.position)
 		var fp: float = placement.def.footprint_radius
+
+		if enclosing_biome == null and dist <= fp:
+			enclosing_biome = placement.def.biome
+
 		var state: Dictionary = active_islands.get(placement.runtime_id, {})
 		if state.is_empty():
 			continue
@@ -92,6 +97,12 @@ func _update_tiers() -> void:
 			_load_near(placement)
 		elif near != null and dist > fp + NEAR_UNLOAD_BUFFER_M:
 			_unload_tier(placement.runtime_id, TIER_NEAR)
+
+	if enclosing_biome == null:
+		enclosing_biome = _get_ocean_biome()
+	if enclosing_biome != _last_active_biome:
+		_last_active_biome = enclosing_biome
+		EventBus.biome_entered.emit(enclosing_biome)
 
 
 func _load_far(placement: IslandPlacement) -> void:
@@ -155,13 +166,6 @@ func _apply_near_deltas(near_root: Node3D, placement: IslandPlacement, deltas: D
 		delta_root.add_child(pickup)
 		var local_arr: Array = payload.get("local_position", [0.0, 0.0, 0.0])
 		pickup.position = V3Codec.decode(local_arr)
-
-
-func _update_biome() -> void:
-	var new_biome := get_active_biome()
-	if new_biome != _last_active_biome:
-		_last_active_biome = new_biome
-		EventBus.biome_entered.emit(new_biome)
 
 
 func get_active_biome() -> BiomeDef:

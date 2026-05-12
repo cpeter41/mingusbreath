@@ -12,17 +12,13 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var actionSM: EnemyActionSM = $EnemyActionSM
 @onready var hurtbox: Area3D = $Hurtbox
 @onready var attack_hitbox: Area3D = $AttackHitbox
-@onready var _mesh: MeshInstance3D = $Mesh
-
-var _hit_mat: StandardMaterial3D
+@onready var mesh: MeshInstance3D = $Mesh
 
 
 func _ready() -> void:
 	assert(def != null, "Enemy requires an EnemyDef resource")
 	hp = def.max_hp
 	spawn_anchor = global_position
-	_hit_mat = StandardMaterial3D.new()
-	_hit_mat.albedo_color = Color.RED
 	attack_hitbox.monitoring = false
 	_ensure_collision_shapes()
 
@@ -57,7 +53,7 @@ func _physics_process(delta: float) -> void:
 
 func take_damage(amount: float, source: Node = null) -> void:
 	hp -= amount
-	_flash_red()
+	DamageFlash.flash(mesh)
 	if hp <= def.flee_hp_ratio * def.max_hp and hp > 0.0:
 		movementSM.transition_to("flee")
 	if hp <= 0.0:
@@ -70,6 +66,8 @@ func _die(source: Node) -> void:
 	queue_free()
 
 
+## Drops are transient by design — husks roam open ocean, no DeltaRoot to persist
+## into. TargetDummy writes deltas because it lives on a streamed island.
 func _drop_loot() -> void:
 	for item_id in def.loot_drops:
 		var pickup := ItemPickup.new()
@@ -77,16 +75,6 @@ func _drop_loot() -> void:
 		pickup.count = 1
 		get_parent().add_child(pickup)
 		pickup.spring(global_position + Vector3.UP * 0.5)
-
-
-func _flash_red() -> void:
-	_mesh.material_override = _hit_mat
-	var t := create_tween()
-	t.tween_interval(0.15)
-	t.tween_callback(func():
-		if is_instance_valid(self):
-			_mesh.material_override = null
-	)
 
 
 func get_player() -> Node3D:

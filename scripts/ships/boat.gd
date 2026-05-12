@@ -21,12 +21,12 @@ var _buoyancy: Buoyancy = null
 var _player_col_layer: int = 0
 var _player_col_mask: int = 0
 
-var _hull_mesh: MeshInstance3D
-var _mount_zone: Area3D
-var _deck_spawn: Node3D
-var _camera_pivot: Node3D
-var _spring_arm: SpringArm3D
-var _camera: Camera3D
+@onready var _mount_zone: Area3D = $MountZone
+@onready var _deck_spawn: Node3D = $DeckSpawn
+@onready var _camera_pivot: Node3D = $CameraPivot
+@onready var _spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
+@onready var _camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
+
 
 func _ready() -> void:
 	mass = 500.0
@@ -92,6 +92,9 @@ func _build_camera_rig() -> void:
 	_camera = Camera3D.new()
 	_camera.current = false
 	_spring_arm.add_child(_camera)
+	Controls.interact_pressed.connect(_on_interact)
+	Controls.mouse_look.connect(_on_mouse_look)
+
 
 func _setup_buoyancy() -> void:
 	_buoyancy = Buoyancy.new()
@@ -141,8 +144,9 @@ func _mount(player: Node) -> void:
 	player.on_boat = true
 	_camera_pivot.global_rotation = Vector3(0, global_rotation.y, 0)
 	_spring_arm.rotation.x = player.camera_pivot.rotation.x
-	_camera.current = true
+	_camera.make_current()
 	Controls.capture_mouse()
+
 
 func _dismount() -> void:
 	if _player != null:
@@ -153,10 +157,11 @@ func _dismount() -> void:
 		_player.collision_mask  = _player_col_mask
 		_player.velocity = Vector3.ZERO
 		_player.on_boat = false
-	_camera.current = false
+	_camera.clear_current()
 	mounted = false
 	throttle = 0.0
 	_player = null
+
 
 func _physics_process(delta: float) -> void:
 	if not mounted:

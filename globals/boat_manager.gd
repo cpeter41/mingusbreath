@@ -1,5 +1,7 @@
 extends Node
 
+const BOAT_SCENE := preload("res://scenes/ships/Boat.tscn")
+
 var _boats: Array[Boat] = []
 var _pending: Array = []
 
@@ -11,6 +13,15 @@ func _ready() -> void:
 
 func register_boat(boat: Boat) -> void:
 	_boats.append(boat)
+
+
+func get_existing_boat() -> Boat:
+	if _boats.is_empty():
+		return null
+	var b: Boat = _boats[0]
+	if is_instance_valid(b) and b.is_inside_tree():
+		return b
+	return null
 
 
 func save_data() -> Dictionary:
@@ -39,7 +50,7 @@ func _on_world_loaded() -> void:
 	if scene == null:
 		return
 	for bd in _pending:
-		var boat := Boat.new()
+		var boat := BOAT_SCENE.instantiate() as Boat
 		boat.rotation.y = float(bd.get("rotation_y", 0.0))
 		scene.add_child(boat)
 		boat.global_position = V3Codec.decode(bd["position"])
