@@ -152,10 +152,9 @@ func _on_mouse_look(delta: Vector2) -> void:
 
 func _physics_process(delta: float) -> void:
 	_regen_stamina(delta)
-	if not on_boat:
-		movementSM.physics_update(delta)
-	else:
-		velocity = Vector3.ZERO
+	if on_boat:
+		return  # Boat owns transform; skip movement, action, and move_and_slide.
+	movementSM.physics_update(delta)
 	actionSM.physics_update(delta)
 	move_and_slide()
 

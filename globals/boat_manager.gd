@@ -34,6 +34,8 @@ func save_data() -> Dictionary:
 		out.append({
 			"position": V3Codec.encode(boat.position),
 			"rotation_y": boat.rotation.y,
+			"linear_velocity": V3Codec.encode(boat.linear_velocity),
+			"angular_velocity": V3Codec.encode(boat.angular_velocity),
 		})
 	return {"boats": out}
 
@@ -52,5 +54,9 @@ func _on_world_loaded() -> void:
 		boat.rotation.y = float(bd.get("rotation_y", 0.0))
 		scene.add_child(boat)
 		boat.global_position = V3Codec.decode(bd["position"])
+		if bd.has("linear_velocity"):
+			boat.linear_velocity = V3Codec.decode(bd["linear_velocity"])
+		if bd.has("angular_velocity"):
+			boat.angular_velocity = V3Codec.decode(bd["angular_velocity"])
 		register_boat(boat)
 	_pending.clear()

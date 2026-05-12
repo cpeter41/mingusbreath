@@ -7,7 +7,6 @@ const HuskScene   := preload("res://scenes/enemies/Husk.tscn")
 const HUDScript   := preload("res://scripts/ui/hud.gd")
 const BoatScene   := preload("res://scenes/ships/Boat.tscn")
 
-
 func _ready() -> void:
 	_add_lighting()
 	_build_island()

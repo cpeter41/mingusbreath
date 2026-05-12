@@ -102,4 +102,6 @@ func _migrate(payload: Dictionary, from_version: int) -> Dictionary:
 		if not payload.has("TimeOfDay"):
 			payload["TimeOfDay"] = {"game_minutes": 480.0}
 		# Player key absent on v1 → load_data not called; fresh-spawn path takes over.
+	# v2→v3: boat velocity fields added to BoatManager save; BoatManager.load_data
+	# handles missing keys via bd.has(), so no payload rewrite is needed here.
 	return payload
