@@ -1,0 +1,48 @@
+[gd_scene load_steps=6 format=3 uid="uid://b8mng8r8b08at"]
+
+[ext_resource type="Script" path="res://scripts/ships/boat.gd" id="1"]
+
+[sub_resource type="BoxMesh" id="1"]
+size = Vector3(2, 0.6, 5)
+
+[sub_resource type="StandardMaterial3D" id="2"]
+albedo_color = Color(0.42, 0.27, 0.14, 1)
+
+[sub_resource type="BoxShape3D" id="3"]
+size = Vector3(2, 1.4, 5)
+
+[sub_resource type="SphereShape3D" id="4"]
+radius = 3.5
+
+[node name="Boat" type="CharacterBody3D"]
+collision_mask = 9
+script = ExtResource("1")
+
+[node name="Hull" type="MeshInstance3D" parent="."]
+mesh = SubResource("1")
+material_override = SubResource("2")
+
+[node name="HullCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+shape = SubResource("3")
+
+[node name="DeckSpawn" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+
+[node name="MountZone" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 1
+
+[node name="MountZoneShape" type="CollisionShape3D" parent="MountZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("4")
+
+[node name="CameraPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
+spring_length = 8.0
+collision_mask = 1
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D"]
+current = false

@@ -8,7 +8,6 @@ enum Phase { TELEGRAPH, STRIKE, COOLDOWN }
 var _phase: Phase = Phase.TELEGRAPH
 var _timer: float  = 0.0
 var _hit_this_strike: bool = false
-var _mesh_tween: Tween
 
 
 func enter() -> void:
@@ -51,11 +50,7 @@ func physics_update(delta: float) -> void:
 func exit() -> void:
 	enemy.attack_hitbox.set_deferred("monitoring", false)
 	_set_telegraph_visual(false)
-	if _mesh_tween:
-		_mesh_tween.kill()
-	var mesh := enemy.get_node_or_null("Mesh") as MeshInstance3D
-	if mesh:
-		mesh.rotation.x = 0.0
+	_reset_mesh_lean()
 	if enemy.attack_hitbox.area_entered.is_connected(_on_hitbox_entered):
 		enemy.attack_hitbox.area_entered.disconnect(_on_hitbox_entered)
 	if EventBus.player_parried.is_connected(_on_player_parried):
@@ -93,19 +88,8 @@ func _face_player() -> void:
 		enemy.look_at(flat_target, Vector3.UP)
 
 
-func _lean_mesh(target_deg: float, duration: float) -> void:
-	var mesh := enemy.get_node_or_null("Mesh") as MeshInstance3D
-	if not mesh:
-		return
-	if _mesh_tween:
-		_mesh_tween.kill()
-	_mesh_tween = enemy.create_tween()
-	_mesh_tween.tween_property(mesh, "rotation:x", deg_to_rad(target_deg), duration).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-
-
 func _set_telegraph_visual(on: bool) -> void:
-	var mesh := enemy.get_node_or_null("Mesh") as MeshInstance3D
-	if not mesh:
+	if enemy.mesh == null:
 		return
 	if on:
 		var mat := StandardMaterial3D.new()
@@ -113,6 +97,6 @@ func _set_telegraph_visual(on: bool) -> void:
 		mat.emission_enabled = true
 		mat.emission = Color(1.0, 0.0, 0.0)
 		mat.emission_energy_multiplier = 1.5
-		mesh.material_override = mat
+		enemy.mesh.material_override = mat
 	else:
-		mesh.material_override = null
+		enemy.mesh.material_override = null

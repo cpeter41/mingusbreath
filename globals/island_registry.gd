@@ -34,12 +34,6 @@ func _load_defs() -> void:
 ## Idempotent — safe to call again after seed change.
 func compute_placements() -> void:
 	placements = IslandPlacer.place(_defs, GameState.world_seed, WORLD_SIZE_M, ISLAND_COUNT)
-	print("[IslandRegistry] %d placements (seed=%d, world=%dm):" % [placements.size(), GameState.world_seed, int(WORLD_SIZE_M)])
-	for p in placements:
-		var pl := p as IslandPlacement
-		print("  slot %d  %-22s  pos=(%7.1f, %7.1f)  r=%.0f" % [
-			pl.slot_index, String(pl.def.id), pl.position.x, pl.position.z, pl.def.footprint_radius
-		])
 
 
 func get_mainland_placement() -> IslandPlacement:

@@ -9,4 +9,5 @@ func _ready() -> void:
 			_states[child.name.to_lower()] = child
 			child.enemy = enemy
 			child.actionSM = self
+	# Deferred so all child state nodes finish _ready before any state.enter() runs.
 	transition_to.call_deferred("idle")

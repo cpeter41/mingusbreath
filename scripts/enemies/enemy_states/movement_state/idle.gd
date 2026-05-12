@@ -6,7 +6,6 @@ const WAIT_TIME := 1.5
 
 func enter() -> void:
 	_timer = WAIT_TIME
-	print("[husk] idle enter @ ", enemy.global_position)
 
 
 func physics_update(delta: float) -> void:
@@ -21,5 +20,4 @@ func physics_update(delta: float) -> void:
 
 	_timer -= delta
 	if _timer <= 0.0:
-		print("[husk] idle → patrol")
 		movementSM.transition_to("patrol")

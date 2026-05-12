@@ -1,13 +1,13 @@
 extends ActionState
 
 var _timer  := 0.0
-var _sword: Node3D
+var _sword: Sword
 
 
 func enter() -> void:
 	_sword = player.get_node("WeaponMount/Sword")
 	_sword.swing()
-	_timer = _sword.attack_duration
+	_timer = Sword.ATTACK_DURATION
 
 
 func physics_update(delta: float) -> void:

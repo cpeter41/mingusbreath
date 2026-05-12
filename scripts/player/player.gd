@@ -3,13 +3,14 @@ extends CharacterBody3D
 const MOUSE_SENSITIVITY := 0.003
 const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
 const SHIELD_SCENE  := preload("res://scenes/weapons/Shield.tscn")
+const BOAT_SCENE    := preload("res://scenes/ships/Boat.tscn")
 const RESPAWN_FALLBACK_Y := 15.0
 const BOAT_SPAWN_DIST := 8.0
 
-var max_hp: float      = 100.0
-var max_stamina: float = 150.0
-var hp: float          = 100.0
-var stamina: float     = 150.0
+@export var max_hp: float      = 100.0
+@export var max_stamina: float = 150.0
+var hp: float          = 0.0
+var stamina: float     = 0.0
 var on_boat: bool      = false
 var is_blocking: bool  = false
 var is_parrying: bool  = false
@@ -18,7 +19,8 @@ var is_parrying: bool  = false
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var _stamina_regen_timer: float = 999.0
-var _pending_pos = null  # null = no saved position (cold start)
+var _has_pending_pos: bool = false
+var _pending_pos: Vector3 = Vector3.ZERO
 var _pending_rot_y: float = 0.0
 var _world_ready: bool = false  # true after _on_world_loaded places the player
 var _save_pos: Vector3 = Vector3.ZERO
@@ -34,6 +36,8 @@ var _save_rot_y: float = 0.0
 
 
 func _ready() -> void:
+	hp = max_hp
+	stamina = max_stamina
 	add_to_group("player")
 	inventory.changed.connect(_on_inventory_changed)
 	Controls.capture_mouse()
@@ -102,7 +106,10 @@ func consume_stamina(amount: float) -> bool:
 
 func die() -> void:
 	EventBus.player_died.emit()
-	get_tree().create_timer(0.6).timeout.connect(respawn)
+	await get_tree().create_timer(0.6).timeout
+	if not is_instance_valid(self):
+		return
+	respawn()
 
 
 func respawn() -> void:
@@ -176,6 +183,7 @@ func load_data(d: Dictionary) -> void:
 	if d.has("position"):
 		_pending_pos = V3Codec.decode(d["position"])
 		_pending_rot_y = float(d.get("rotation_y", 0.0))
+		_has_pending_pos = true
 
 
 func _try_spawn_boat() -> void:
@@ -184,13 +192,12 @@ func _try_spawn_boat() -> void:
 	spawn_pos.y = 0.0
 	if WorldStream.get_placement_enclosing(spawn_pos) != null:
 		return
-	if BoatManager._boats.size() > 0:
-		var existing := BoatManager._boats[0] as Boat
-		if is_instance_valid(existing) and existing.is_inside_tree():
-			existing.global_position = spawn_pos
-			existing.rotation.y = rotation.y
-			return
-	var boat := Boat.new()
+	var existing := BoatManager.get_existing_boat()
+	if existing != null:
+		existing.global_position = spawn_pos
+		existing.rotation.y = rotation.y
+		return
+	var boat := BOAT_SCENE.instantiate() as Boat
 	boat.rotation.y = rotation.y
 	get_parent().add_child(boat)
 	boat.global_position = spawn_pos
@@ -204,7 +211,7 @@ func _on_world_loaded() -> void:
 	if inventory.count_of(&"shield") == 0:
 		inventory.add(&"shield", 1)
 
-	if _pending_pos != null:
+	if _has_pending_pos:
 		global_position = _pending_pos
 		rotation.y = _pending_rot_y
 	else:

@@ -23,8 +23,8 @@ func _ready() -> void:
 	col.shape = SphereShape3D.new()
 	col.shape.radius = 0.6
 	add_child(col)
-	collision_layer = 8
-	collision_mask = 1
+	collision_layer = CollisionLayers.SHORE_WALL  # shares bit with shore wall — Area3D, no physical collision
+	collision_mask = CollisionLayers.WORLD
 
 	body_entered.connect(_on_body_entered)
 
