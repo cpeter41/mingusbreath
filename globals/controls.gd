@@ -17,6 +17,7 @@ const ATTACK_HEAVY   := &"attack_heavy"
 const BLOCK          := &"block"
 const INTERACT       := &"interact"
 const INVENTORY      := &"inventory"
+const MAP            := &"map"
 const PAUSE          := &"pause"
 const SPAWN_BOAT     := &"spawn_boat"
 const RESET_SAVE     := &"reset_save"
@@ -33,6 +34,7 @@ signal reset_pressed
 signal spawn_boat_pressed
 signal interact_pressed
 signal inventory_toggled
+signal map_toggled
 signal mouse_look(delta: Vector2)
 
 
@@ -56,6 +58,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed(INVENTORY):
 		inventory_toggled.emit()
+		return
+	if event.is_action_pressed(MAP):
+		map_toggled.emit()
 		return
 	if event is InputEventMouseMotion and is_mouse_captured():
 		mouse_look.emit((event as InputEventMouseMotion).relative)

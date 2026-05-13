@@ -21,6 +21,9 @@ func _ready() -> void:
 	var inv_screen := InventoryScreen.new()
 	add_child(inv_screen)
 
+	var map_screen := MapScreen.new()
+	add_child(map_screen)
+
 	_add_stat_bars()
 	_add_pickup_label()
 	_add_death_fade()
