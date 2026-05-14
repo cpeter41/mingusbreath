@@ -4,7 +4,7 @@
 
 [node name="ZoneDebug" type="Node3D"]
 script = ExtResource("1")
-enabled = true
+enabled = false
 resolution = 128
 y_offset = 2.0
 alpha = 0.6

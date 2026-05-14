@@ -30,6 +30,10 @@ func _ready() -> void:
 	_add_coords_label()
 	_add_biome_label()
 
+	var legend := ControlsLegend.new()
+	legend.name = "ControlsLegend"
+	add_child(legend)
+
 	EventBus.item_picked_up.connect(_on_item_picked_up)
 	EventBus.biome_entered.connect(_on_biome_entered)
 	EventBus.player_died.connect(_on_player_died)

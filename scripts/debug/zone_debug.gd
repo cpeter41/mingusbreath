@@ -1,7 +1,7 @@
 class_name ZoneDebug
 extends Node3D
 
-@export var enabled: bool = true
+@export var enabled: bool = false
 @export var resolution: int = 128
 @export var y_offset: float = 2.0
 @export var alpha: float = 0.6

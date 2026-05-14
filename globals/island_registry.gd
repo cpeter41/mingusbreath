@@ -4,7 +4,8 @@ extends Node
 
 const ISLANDS_DIR := "res://data/islands/"
 const WORLD_SIZE_M := 8192.0
-const ISLAND_COUNT := 8
+const ISLAND_COUNT := 12
+const MIN_PER_DEF := 2
 
 var _defs: Array = []  # Array[IslandDef]
 var placements: Array = []  # Array[IslandPlacement] — empty until compute_placements()
@@ -34,7 +35,7 @@ func _load_defs() -> void:
 ## Idempotent — safe to call again after seed change.
 func compute_placements() -> void:
 	ZoneMap.compute(GameState.world_seed, WORLD_SIZE_M)
-	placements = IslandPlacer.place(_defs, GameState.world_seed, WORLD_SIZE_M, ISLAND_COUNT)
+	placements = IslandPlacer.place(_defs, GameState.world_seed, WORLD_SIZE_M, ISLAND_COUNT, 64, MIN_PER_DEF)
 
 
 func get_mainland_placement() -> IslandPlacement:
