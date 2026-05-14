@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ZoneDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/zone_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+difficulty = 2
+debug_color = Color(0.9, 0.2, 0.2, 1)
+enemy_spawn_weight = 1.5
+enemy_density_mul = 1.75
+loot_quality_mul = 1.75
