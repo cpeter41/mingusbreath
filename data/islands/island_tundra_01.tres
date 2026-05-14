@@ -16,3 +16,4 @@ near_scene = ExtResource("5")
 biome = ExtResource("3")
 footprint_radius = 90.0
 placement_weight = 1.0
+difficulty = 2

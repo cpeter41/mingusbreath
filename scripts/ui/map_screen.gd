@@ -65,7 +65,8 @@ func _process(_delta: float) -> void:
 
 func _toggle() -> void:
 	visible = !visible
-	get_tree().paused = visible
+	Controls.input_blocked = visible
+	Controls.allow_movement_while_blocked = visible
 	if visible:
 		Controls.release_mouse()
 		_canvas.queue_redraw()
@@ -75,6 +76,9 @@ func _toggle() -> void:
 
 class MapCanvas extends Control:
 	const WORLD_SIZE := 8192.0  # IslandRegistry.WORLD_SIZE_M
+	const ZONE_OVERLAY_RES := 128
+
+	var _zone_overlay: ImageTexture = null
 
 	func _process(_delta: float) -> void:
 		if is_visible_in_tree():
@@ -84,6 +88,12 @@ class MapCanvas extends Control:
 		var s := size
 		# Ocean.
 		draw_rect(Rect2(Vector2.ZERO, s), Color(0.10, 0.20, 0.35), true)
+		# Zone debug overlay — under islands, over ocean.
+		if ZoneMap.debug_visible:
+			if _zone_overlay == null:
+				_zone_overlay = _build_zone_overlay()
+			if _zone_overlay != null:
+				draw_texture_rect(_zone_overlay, Rect2(Vector2.ZERO, s), false, Color(1, 1, 1, 0.55))
 		# Border.
 		draw_rect(Rect2(Vector2.ZERO, s), Color(0.9, 0.9, 0.9, 0.6), false, 2.0)
 
@@ -137,6 +147,24 @@ class MapCanvas extends Control:
 		var nx := (world.x + WORLD_SIZE * 0.5) / WORLD_SIZE
 		var nz := (world.z + WORLD_SIZE * 0.5) / WORLD_SIZE
 		return Vector2(nx, nz) * size
+
+	func _build_zone_overlay() -> ImageTexture:
+		if ZoneMap.zones.is_empty():
+			return null
+		var n := ZONE_OVERLAY_RES
+		var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+		var step := WORLD_SIZE / float(n)
+		var origin := -WORLD_SIZE * 0.5 + step * 0.5
+		for iy in n:
+			for ix in n:
+				# Map UI x → world x, map UI y → world z (same as _world_to_map).
+				var wx := origin + ix * step
+				var wz := origin + iy * step
+				var zone := ZoneMap.get_zone(Vector3(wx, 0.0, wz))
+				var c: Color = zone.def.debug_color if zone != null else Color.MAGENTA
+				img.set_pixel(ix, iy, c)
+		return ImageTexture.create_from_image(img)
+
 
 	func _island_color(def: IslandDef) -> Color:
 		if def.biome != null:

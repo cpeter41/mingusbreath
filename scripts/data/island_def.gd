@@ -12,3 +12,4 @@ extends Resource
 @export var biome: BiomeDef = null
 @export var footprint_radius: float = 80.0
 @export var placement_weight: float = 1.0
+@export var difficulty: int = Difficulty.EASY

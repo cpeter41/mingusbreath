@@ -52,30 +52,53 @@ static func place(
 		var lo := -half + edge_inset
 		var hi :=  half - edge_inset
 
-		# Rejection sampling for position.
-		var placed := false
-		for _attempt in range(max_attempts):
-			var cx := rng.randf_range(lo, hi)
-			var cz := rng.randf_range(lo, hi)
-			var candidate := Vector3(cx, 0.0, cz)
-
-			if _too_close(candidate, chosen_def.footprint_radius, placements):
-				continue
-
-			var p := IslandPlacement.new()
-			p.def = chosen_def
-			p.position = candidate
-			p.rotation_y = rng.randf_range(0.0, TAU)
-			p.slot_index = slot
-			p.runtime_id = IslandRuntimeId.compute(world_seed, slot, chosen_def.id)
-			placements.append(p)
-			placed = true
-			break
+		# Two-pass rejection sampling. Pass 1 honors zone-difficulty match;
+		# pass 2 drops the zone constraint and warns.
+		var placed := _try_place_slot(
+				placements, chosen_def, slot, rng, world_seed,
+				lo, hi, max_attempts, true)
+		if not placed:
+			placed = _try_place_slot(
+					placements, chosen_def, slot, rng, world_seed,
+					lo, hi, max_attempts, false)
+			if placed:
+				push_warning("IslandPlacer: slot %d — zone-match fallback (could not find matching zone)" % slot)
 
 		if not placed:
-			push_warning("IslandPlacer: slot %d — could not place after %d attempts, skipping" % [slot, max_attempts])
+			push_warning("IslandPlacer: slot %d — could not place after %d attempts, skipping" % [slot, max_attempts * 2])
 
 	return placements
+
+
+static func _try_place_slot(
+		placements: Array,
+		chosen_def: IslandDef,
+		slot: int,
+		rng: RandomNumberGenerator,
+		world_seed: int,
+		lo: float,
+		hi: float,
+		max_attempts: int,
+		enforce_zone: bool) -> bool:
+	for _attempt in range(max_attempts):
+		var cx := rng.randf_range(lo, hi)
+		var cz := rng.randf_range(lo, hi)
+		var candidate := Vector3(cx, 0.0, cz)
+
+		if _too_close(candidate, chosen_def.footprint_radius, placements):
+			continue
+		if enforce_zone and ZoneMap.classify(candidate) != chosen_def.difficulty:
+			continue
+
+		var p := IslandPlacement.new()
+		p.def = chosen_def
+		p.position = candidate
+		p.rotation_y = rng.randf_range(0.0, TAU)
+		p.slot_index = slot
+		p.runtime_id = IslandRuntimeId.compute(world_seed, slot, chosen_def.id)
+		placements.append(p)
+		return true
+	return false
 
 
 static func _pick_weighted(defs: Array, rng: RandomNumberGenerator) -> IslandDef:

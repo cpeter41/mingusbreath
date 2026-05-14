@@ -33,6 +33,7 @@ func _load_defs() -> void:
 ## Call after SaveSystem.load_or_init() so world_seed is correct.
 ## Idempotent — safe to call again after seed change.
 func compute_placements() -> void:
+	ZoneMap.compute(GameState.world_seed, WORLD_SIZE_M)
 	placements = IslandPlacer.place(_defs, GameState.world_seed, WORLD_SIZE_M, ISLAND_COUNT)
 
 
