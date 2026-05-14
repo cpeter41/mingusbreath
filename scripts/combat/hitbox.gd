@@ -16,6 +16,14 @@ func _on_area_entered(area: Area3D) -> void:
 		return
 	var target   := area.owner
 	var attacker := get_parent().owner  # Sword.owner = Player (set when instanced in Player.tscn)
+	# Only the attacker's authority peer applies damage. Without this, future
+	# inventory replication would make the hitbox visible on all peers and each
+	# would call take_damage on the same hit.
+	if attacker != null and attacker.has_method("is_multiplayer_authority") and not attacker.is_multiplayer_authority():
+		return
+	# Don't self-hit (player's own hitbox touching their own hurtbox).
+	if target == attacker:
+		return
 	var amount   := CombatResolver.resolve(attacker, target, weapon_id, damage, skill_id)
 	EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)
 	SkillManager.add_xp(skill_id, amount * 0.1)

@@ -1,4 +1,8 @@
 extends CharacterBody3D
+# Owner-authoritative player.
+# Movement runs on the owning client. Position, rotation, hp, stamina replicate to
+# all peers via MultiplayerSynchronizer. Damage is requested via RPC and applied
+# on the owner. Camera/input attach only on the owning peer.
 
 const MOUSE_SENSITIVITY := 0.003
 const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
@@ -9,11 +13,37 @@ const BOAT_SPAWN_DIST := 8.0
 
 @export var max_hp: float      = 100.0
 @export var max_stamina: float = 150.0
-var hp: float          = 0.0
-var stamina: float     = 0.0
+
+# Replicated via MultiplayerSynchronizer. Setters re-emit EventBus signals
+# only on the owning peer so each peer's HUD reads its own local player.
+var hp: float = 0.0:
+	set(v):
+		hp = v
+		if is_inside_tree() and is_multiplayer_authority():
+			EventBus.player_hp_changed.emit(hp, max_hp)
+var stamina: float = 0.0:
+	set(v):
+		stamina = v
+		if is_inside_tree() and is_multiplayer_authority():
+			EventBus.player_stamina_changed.emit(stamina, max_stamina)
 var on_boat: bool      = false
 var is_blocking: bool  = false
 var is_parrying: bool  = false
+
+# Replicated visual flags. Owner sets these from inventory contents; all peers
+# spawn/free the Sword/Shield mount nodes based on flag transitions. Inventory
+# contents themselves are not replicated — only the visible loadout state is.
+var has_sword: bool = false:
+	set(v):
+		has_sword = v
+		_update_sword_visual()
+var has_shield: bool = false:
+	set(v):
+		var was := has_shield
+		has_shield = v
+		_update_shield_visual()
+		if not v and was and is_inside_tree() and is_multiplayer_authority() and is_blocking and actionSM != null:
+			actionSM.transition_to("idle")
 
 @export var speed: float = 5.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -36,39 +66,68 @@ var _save_rot_y: float = 0.0
 
 
 func _ready() -> void:
+	# Authority is encoded in the node name "Player_<peer_id>" by NetworkManager.
+	# Each peer derives the same authority locally — MultiplayerSpawner does NOT
+	# replicate set_multiplayer_authority calls, so name parsing is the canonical
+	# place to set it.
+	var parts := name.split("_")
+	if parts.size() == 2 and parts[0] == "Player":
+		set_multiplayer_authority(int(parts[1]), true)
+
 	hp = max_hp
 	stamina = max_stamina
-	add_to_group("player")
 	inventory.changed.connect(_on_inventory_changed)
+	EventBus.world_loaded.connect(_on_world_loaded, CONNECT_ONE_SHOT)
+
+	# Only the owning peer drives input, camera, and physics for this player.
+	# Non-owner peers see a replicated ghost driven by the MultiplayerSynchronizer.
+	if not is_multiplayer_authority():
+		# Remote ghost: keep collision off the player's own move_and_slide path
+		# but allow incoming hitboxes to still detect this body.
+		set_physics_process(false)
+		return
+
+	add_to_group("player")
 	Controls.capture_mouse()
 	Controls.pause_pressed.connect(_on_pause_pressed)
 	Controls.reset_pressed.connect(_on_reset_pressed)
 	Controls.spawn_boat_pressed.connect(_on_spawn_boat_pressed)
 	Controls.mouse_look.connect(_on_mouse_look)
+	$CameraPivot/SpringArm3D/Camera3D.make_current()
 	EventBus.player_hp_changed.emit.call_deferred(hp, max_hp)
 	EventBus.player_stamina_changed.emit.call_deferred(stamina, max_stamina)
-	SaveSystem.register(self)
-	EventBus.world_loaded.connect(_on_world_loaded, CONNECT_ONE_SHOT)
+	if multiplayer.is_server():
+		# Host owns the world save. Guests use a separate profile (Phase 8).
+		SaveSystem.register(self)
 
 
 func _on_inventory_changed() -> void:
-	var has_sword := inventory.count_of(&"sword") > 0
-	var sword_node := weapon_mount.get_node_or_null("Sword")
-	if has_sword and sword_node == null:
-		var sword := SWORD_SCENE.instantiate()
-		weapon_mount.add_child(sword)
-	elif not has_sword and sword_node != null:
-		sword_node.queue_free()
+	# Owner's inventory is the source of truth. Update the replicated visual
+	# flags; setters spawn/free the mount nodes on every peer.
+	if not is_multiplayer_authority():
+		return
+	has_sword = inventory.count_of(&"sword") > 0
+	has_shield = inventory.count_of(&"shield") > 0
 
-	var shld := inventory.count_of(&"shield") > 0
-	var shield_node := shield_mount.get_node_or_null("Shield")
-	if shld and shield_node == null:
-		var s := SHIELD_SCENE.instantiate()
-		shield_mount.add_child(s)
-	elif not shld and shield_node != null:
-		shield_node.queue_free()
-		if is_blocking:
-			actionSM.transition_to("idle")
+
+func _update_sword_visual() -> void:
+	if not is_inside_tree() or weapon_mount == null:
+		return
+	var existing := weapon_mount.get_node_or_null("Sword")
+	if has_sword and existing == null:
+		weapon_mount.add_child(SWORD_SCENE.instantiate())
+	elif not has_sword and existing != null:
+		existing.queue_free()
+
+
+func _update_shield_visual() -> void:
+	if not is_inside_tree() or shield_mount == null:
+		return
+	var existing := shield_mount.get_node_or_null("Shield")
+	if has_shield and existing == null:
+		shield_mount.add_child(SHIELD_SCENE.instantiate())
+	elif not has_shield and existing != null:
+		existing.queue_free()
 
 
 func has_shield() -> bool:
@@ -80,7 +139,15 @@ func take_pickup(item_id: StringName, count: int) -> void:
 	EventBus.item_picked_up.emit(item_id, count)
 
 
+## Public damage entry. Local callers (server-side enemies, this player's own
+## combat code) pass `source` as a Node. Cross-peer calls go through
+## `take_damage_rpc` which takes a NodePath and forwards here.
 func take_damage(amount: float, source = null) -> void:
+	if not is_multiplayer_authority():
+		# Reroute to owner.
+		var src_path: NodePath = source.get_path() if source is Node else NodePath()
+		rpc_id(get_multiplayer_authority(), "take_damage_rpc", amount, src_path)
+		return
 	if is_parrying:
 		EventBus.player_parried.emit(source)
 		return
@@ -90,21 +157,31 @@ func take_damage(amount: float, source = null) -> void:
 			amount *= 0.2
 		# stamina too low — block fails, full damage applies
 	hp = maxf(0.0, hp - amount)
-	EventBus.player_hp_changed.emit(hp, max_hp)
 	if hp <= 0.0:
 		die()
 
 
+@rpc("any_peer", "reliable")
+func take_damage_rpc(amount: float, source_path: NodePath) -> void:
+	if not is_multiplayer_authority():
+		return
+	var src: Node = get_node_or_null(source_path) if source_path != NodePath() else null
+	take_damage(amount, src)
+
+
 func consume_stamina(amount: float) -> bool:
+	if not is_multiplayer_authority():
+		return false
 	if stamina < amount:
 		return false
 	stamina = maxf(0.0, stamina - amount)
 	_stamina_regen_timer = 0.0
-	EventBus.player_stamina_changed.emit(stamina, max_stamina)
 	return true
 
 
 func die() -> void:
+	if not is_multiplayer_authority():
+		return
 	EventBus.player_died.emit()
 	await get_tree().create_timer(0.6).timeout
 	if not is_instance_valid(self):
@@ -113,12 +190,12 @@ func die() -> void:
 
 
 func respawn() -> void:
-	global_position = _mainland_spawn_point()
+	if not is_multiplayer_authority():
+		return
+	global_position = _mainland_spawn_point() + _spawn_offset_for_peer(get_multiplayer_authority())
 	hp = max_hp
 	stamina = max_stamina
 	_stamina_regen_timer = 999.0
-	EventBus.player_hp_changed.emit(hp, max_hp)
-	EventBus.player_stamina_changed.emit(stamina, max_stamina)
 	EventBus.player_respawned.emit()
 
 
@@ -203,7 +280,14 @@ func _try_spawn_boat() -> void:
 	BoatManager.register_boat(boat)
 
 
+const SPAWN_RING_RADIUS := 3.0
+const SPAWN_SLOTS := 4
+
+
 func _on_world_loaded() -> void:
+	if not is_multiplayer_authority():
+		_world_ready = true
+		return
 	# Grant starter loadout once. Idempotent so it survives save/load round-trips.
 	if inventory.count_of(&"sword") == 0:
 		inventory.add(&"sword", 1)
@@ -214,9 +298,17 @@ func _on_world_loaded() -> void:
 		global_position = _pending_pos
 		rotation.y = _pending_rot_y
 	else:
-		global_position = _mainland_spawn_point()
+		global_position = _mainland_spawn_point() + _spawn_offset_for_peer(get_multiplayer_authority())
 	velocity = Vector3.ZERO
 	_world_ready = true
+
+
+## Deterministic per-peer offset around mainland anchor. Each peer arrives at a
+## distinct slot on a small ring so capsules don't overlap and shove each other.
+func _spawn_offset_for_peer(peer_id: int) -> Vector3:
+	var idx := peer_id % SPAWN_SLOTS
+	var angle := TAU * float(idx) / float(SPAWN_SLOTS)
+	return Vector3(cos(angle), 0.0, sin(angle)) * SPAWN_RING_RADIUS
 
 
 func _mainland_spawn_point() -> Vector3:

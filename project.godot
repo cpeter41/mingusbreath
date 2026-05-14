@@ -11,12 +11,15 @@ config_version=5
 [application]
 
 config/name="Mingusbreath"
-run/main_scene="res://scenes/world/World.tscn"
+run/main_scene="res://scenes/ui/LobbyMenu.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]
 
 EventBus="*res://globals/event_bus.gd"
+SteamLobby="*res://globals/steam_lobby.gd"
+NetworkManager="*res://globals/network_manager.gd"
+AuthorityRouter="*res://globals/authority_router.gd"
 Ocean="*res://globals/ocean.gd"
 SaveSystem="*res://globals/save_system.gd"
 GameState="*res://globals/game_state.gd"
@@ -149,3 +152,11 @@ time_accel={
 3d_physics/layer_2="Hitbox"
 3d_physics/layer_3="Hurtbox"
 3d_physics/layer_4="ShoreWall"
+3d_physics/layer_5="NetGhost"
+
+[steam]
+
+initialization/app_id=0
+initialization/initialize_on_startup=false
+initialization/embed_callbacks=false
+multiplayer_peer/max_channels=4

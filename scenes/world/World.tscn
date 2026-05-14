@@ -129,7 +129,11 @@ script = ExtResource("6_moon")
 [node name="WorldEnv" type="WorldEnvironment" parent="." unique_id=2115614150]
 environment = SubResource("Env_1")
 
-[node name="Player" parent="." unique_id=863874365 instance=ExtResource("3_pl")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)
+[node name="Players" type="Node3D" parent="."]
+
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/player/Player.tscn")
+spawn_path = NodePath("../Players")
+spawn_limit = 4
 
 [node name="ZoneDebug" parent="." instance=ExtResource("9_zd")]

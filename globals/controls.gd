@@ -110,6 +110,11 @@ func attack_light_held() -> bool:
 func time_accel_held() -> bool:
 	if input_blocked:
 		return false
+	# Debug-only feature: host (or solo) + F2 debug overlay on.
+	if not multiplayer.is_server():
+		return false
+	if not ZoneMap.debug_visible:
+		return false
 	return Input.is_action_pressed(TIME_ACCEL)
 
 
