@@ -9,6 +9,7 @@
 [ext_resource type="Shader" uid="uid://yd5h2vf9kc3zb" path="res://shaders/water.gdshader" id="7_water"]
 [ext_resource type="Script" path="res://scripts/world/world_border.gd" id="7_wb"]
 [ext_resource type="Shader" path="res://shaders/world_border.gdshader" id="8_bs"]
+[ext_resource type="PackedScene" path="res://scenes/debug/ZoneDebug.tscn" id="9_zd"]
 
 [sub_resource type="ShaderMaterial" id="WaterMat_1"]
 shader = ExtResource("7_water")
@@ -130,3 +131,5 @@ environment = SubResource("Env_1")
 
 [node name="Player" parent="." unique_id=863874365 instance=ExtResource("3_pl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)
+
+[node name="ZoneDebug" parent="." instance=ExtResource("9_zd")]
