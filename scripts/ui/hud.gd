@@ -21,11 +21,18 @@ func _ready() -> void:
 	var inv_screen := InventoryScreen.new()
 	add_child(inv_screen)
 
+	var map_screen := MapScreen.new()
+	add_child(map_screen)
+
 	_add_stat_bars()
 	_add_pickup_label()
 	_add_death_fade()
 	_add_coords_label()
 	_add_biome_label()
+
+	var legend := ControlsLegend.new()
+	legend.name = "ControlsLegend"
+	add_child(legend)
 
 	EventBus.item_picked_up.connect(_on_item_picked_up)
 	EventBus.biome_entered.connect(_on_biome_entered)
