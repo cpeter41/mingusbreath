@@ -7,7 +7,9 @@ var _defs: Dictionary = {}  # StringName -> SkillDef
 
 func _ready() -> void:
 	_load_defs()
-	SaveSystem.register(self)
+	# Skills are per-player progression — live in the peer's local profile,
+	# not the host-owned world save.
+	ProfileSave.register(self)
 
 func _load_defs() -> void:
 	var d := DirAccess.open(SKILLS_DIR)

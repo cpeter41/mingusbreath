@@ -12,47 +12,92 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.08, 0.08, 0.11, 1)
 
-[node name="VBox" type="VBoxContainer" parent="."]
-anchor_left = 0.35
-anchor_top = 0.2
-anchor_right = 0.65
-anchor_bottom = 0.9
+[node name="Columns" type="HBoxContainer" parent="."]
+anchor_left = 0.2
+anchor_top = 0.12
+anchor_right = 0.8
+anchor_bottom = 0.95
+theme_override_constants/separation = 40
+
+[node name="VBox" type="VBoxContainer" parent="Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="Title" type="Label" parent="VBox"]
+[node name="Title" type="Label" parent="Columns/VBox"]
 text = "Mingusbreath — Lobby"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 28
 
-[node name="HostSteam" type="Button" parent="VBox"]
+[node name="HostSteam" type="Button" parent="Columns/VBox"]
 text = "Host (Steam Lobby)"
 
-[node name="HostLocal" type="Button" parent="VBox"]
+[node name="HostLocal" type="Button" parent="Columns/VBox"]
 text = "Host (Local ENet 7777)"
 
-[node name="JoinIP" type="LineEdit" parent="VBox"]
+[node name="JoinIP" type="LineEdit" parent="Columns/VBox"]
 placeholder_text = "127.0.0.1"
 text = "127.0.0.1"
 
-[node name="JoinLocal" type="Button" parent="VBox"]
+[node name="JoinLocal" type="Button" parent="Columns/VBox"]
 text = "Join Local ENet"
 
-[node name="Solo" type="Button" parent="VBox"]
+[node name="Solo" type="Button" parent="Columns/VBox"]
 text = "Solo (Offline)"
 
-[node name="StartGame" type="Button" parent="VBox"]
+[node name="StartGame" type="Button" parent="Columns/VBox"]
 text = "Start Game"
 disabled = true
 
-[node name="Leave" type="Button" parent="VBox"]
+[node name="Leave" type="Button" parent="Columns/VBox"]
 text = "Leave"
 disabled = true
 
-[node name="Sep" type="HSeparator" parent="VBox"]
+[node name="Sep" type="HSeparator" parent="Columns/VBox"]
 
-[node name="Status" type="Label" parent="VBox"]
+[node name="Status" type="Label" parent="Columns/VBox"]
 text = "Idle"
 horizontal_alignment = 1
 
-[node name="Roster" type="Label" parent="VBox"]
+[node name="Roster" type="Label" parent="Columns/VBox"]
 text = ""
+
+[node name="SlotsColumn" type="VBoxContainer" parent="Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="SlotsTitle" type="Label" parent="Columns/SlotsColumn"]
+text = "Save Slots"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+
+[node name="WorldLabel" type="Label" parent="Columns/SlotsColumn"]
+text = "World"
+
+[node name="WorldDropdown" type="OptionButton" parent="Columns/SlotsColumn"]
+
+[node name="WorldCreate" type="HBoxContainer" parent="Columns/SlotsColumn"]
+theme_override_constants/separation = 4
+
+[node name="WorldNameEdit" type="LineEdit" parent="Columns/SlotsColumn/WorldCreate"]
+size_flags_horizontal = 3
+placeholder_text = "New world name"
+
+[node name="WorldAddBtn" type="Button" parent="Columns/SlotsColumn/WorldCreate"]
+text = "+"
+
+[node name="CharLabel" type="Label" parent="Columns/SlotsColumn"]
+text = "Character"
+
+[node name="CharDropdown" type="OptionButton" parent="Columns/SlotsColumn"]
+
+[node name="CharCreate" type="HBoxContainer" parent="Columns/SlotsColumn"]
+theme_override_constants/separation = 4
+
+[node name="CharNameEdit" type="LineEdit" parent="Columns/SlotsColumn/CharCreate"]
+size_flags_horizontal = 3
+placeholder_text = "New character name"
+
+[node name="CharAddBtn" type="Button" parent="Columns/SlotsColumn/CharCreate"]
+text = "+"

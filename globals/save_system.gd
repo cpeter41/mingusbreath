@@ -1,24 +1,86 @@
 extends Node
 # Saveable interface (duck-typed): save_data() -> Dictionary, load_data(d: Dictionary) -> void.
 # Autoloads call SaveSystem.register(self) from _ready to participate in save/load.
+#
+# World saves are slot files under user://worlds/<name>.dat. The active slot is
+# `current_world`, chosen in the lobby menu before a game starts.
 
-const SAVE_PATH := "user://save.dat"
-const TEMP_PATH := "user://save.tmp"
+const WORLDS_DIR := "user://worlds/"
+const LEGACY_SAVE_PATH := "user://save.dat"
 const SCHEMA_VERSION := 3
+
+var current_world: String = ""
 
 var _saveables: Array[Node] = []
 var _save_disabled: bool = false
+
+
+func _ready() -> void:
+	DirAccess.make_dir_recursive_absolute(WORLDS_DIR)
+	_migrate_legacy_save()
+
 
 func register(node: Node) -> void:
 	if node not in _saveables:
 		_saveables.append(node)
 
+
 func disable_save() -> void:
 	_save_disabled = true
+
+
+func set_world(world_name: String) -> void:
+	current_world = world_name
+
+
+## Lists existing world slot names (no extension), sorted.
+func list_worlds() -> PackedStringArray:
+	return SlotUtil.list_slots(WORLDS_DIR)
+
+
+## Creates a new (empty) world slot file and returns its final name. A 0-byte
+## .dat loads cleanly via load_or_init (treated as defaults).
+func create_world(base: String) -> String:
+	var slot_name := SlotUtil.unique_name(WORLDS_DIR, base)
+	var f := FileAccess.open(WORLDS_DIR + slot_name + ".dat", FileAccess.WRITE)
+	if f != null:
+		f.close()
+	return slot_name
+
+
+func _save_path() -> String:
+	return WORLDS_DIR + current_world + ".dat"
+
+
+func _temp_path() -> String:
+	return WORLDS_DIR + current_world + ".tmp"
+
+
+## One-time move of a legacy user://save.dat into the worlds folder.
+func _migrate_legacy_save() -> void:
+	if not FileAccess.file_exists(LEGACY_SAVE_PATH):
+		return
+	var target := WORLDS_DIR + "save.dat"
+	if FileAccess.file_exists(target):
+		return
+	var d := DirAccess.open("user://")
+	if d == null:
+		return
+	if d.copy(LEGACY_SAVE_PATH, target) == OK:
+		d.remove(LEGACY_SAVE_PATH)
+		print("[SaveSystem] migrated legacy save.dat -> worlds/save.dat")
+
 
 func save() -> bool:
 	if _save_disabled:
 		return true
+	# World save is host-owned. Guests skip — their per-peer state lives in
+	# ProfileSave (user://characters/<name>.dat).
+	if not multiplayer.is_server():
+		return true
+	if current_world == "":
+		push_warning("SaveSystem: save() with no world selected — skipped")
+		return false
 	var payload := {}
 	for n in _saveables:
 		if n.has_method("save_data"):
@@ -27,47 +89,63 @@ func save() -> bool:
 		"header": {"version": SCHEMA_VERSION, "seed": GameState.world_seed},
 		"payload": payload,
 	}
-	var f := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
+	var f := FileAccess.open(_temp_path(), FileAccess.WRITE)
 	if f == null:
-		push_error("SaveSystem: failed to open %s for write (err=%d)" % [TEMP_PATH, FileAccess.get_open_error()])
+		push_error("SaveSystem: failed to open %s for write (err=%d)" % [_temp_path(), FileAccess.get_open_error()])
 		return false
 	f.store_var(blob)
 	f.flush()
 	f.close()
-	var d := DirAccess.open("user://")
+	var d := DirAccess.open(WORLDS_DIR)
 	if d == null:
-		push_error("SaveSystem: failed to open user:// for rename")
+		push_error("SaveSystem: failed to open %s for rename" % WORLDS_DIR)
 		return false
-	if d.file_exists(SAVE_PATH.get_file()):
-		d.remove(SAVE_PATH.get_file())
-	var err := d.rename(TEMP_PATH.get_file(), SAVE_PATH.get_file())
+	var save_file := _save_path().get_file()
+	var temp_file := _temp_path().get_file()
+	if d.file_exists(save_file):
+		d.remove(save_file)
+	var err := d.rename(temp_file, save_file)
 	if err != OK:
 		push_error("SaveSystem: rename failed (err=%d)" % err)
 		return false
 	return true
 
+
 func load_or_init() -> void:
 	_save_disabled = false
+	# Only the host loads world state. Guests receive world state via
+	# replication once spawned.
+	if not multiplayer.is_server():
+		return
 	for i in range(_saveables.size() - 1, -1, -1):
 		if not is_instance_valid(_saveables[i]):
 			_saveables.remove_at(i)
-	if not FileAccess.file_exists(SAVE_PATH):
+	if current_world == "":
+		push_warning("SaveSystem: load_or_init() with no world selected — defaults")
 		for n in _saveables:
 			if n.has_method("load_data"):
 				n.load_data({})
 		return
-	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if not FileAccess.file_exists(_save_path()):
+		for n in _saveables:
+			if n.has_method("load_data"):
+				n.load_data({})
+		return
+	var f := FileAccess.open(_save_path(), FileAccess.READ)
 	if f == null:
-		push_error("SaveSystem: failed to open %s for read (err=%d)" % [SAVE_PATH, FileAccess.get_open_error()])
+		push_error("SaveSystem: failed to open %s for read (err=%d)" % [_save_path(), FileAccess.get_open_error()])
 		return
 	if f.get_length() == 0:
-		push_warning("SaveSystem: %s is empty, starting with defaults" % SAVE_PATH)
+		push_warning("SaveSystem: %s is empty, starting with defaults" % _save_path())
 		f.close()
+		for n in _saveables:
+			if n.has_method("load_data"):
+				n.load_data({})
 		return
 	var blob = f.get_var()
 	f.close()
 	if typeof(blob) != TYPE_DICTIONARY or not blob.has("header") or not blob.has("payload"):
-		push_warning("SaveSystem: %s malformed, starting with defaults" % SAVE_PATH)
+		push_warning("SaveSystem: %s malformed, starting with defaults" % _save_path())
 		return
 	var header: Dictionary = blob["header"]
 	var version := int(header.get("version", 0))
@@ -84,14 +162,20 @@ func load_or_init() -> void:
 		if n.has_method("load_data") and payload.has(n.name):
 			n.load_data(payload[n.name])
 
+
 func delete_save() -> void:
-	var d := DirAccess.open("user://")
+	if current_world == "":
+		return
+	var d := DirAccess.open(WORLDS_DIR)
 	if d == null:
 		return
-	if d.file_exists(SAVE_PATH.get_file()):
-		d.remove(SAVE_PATH.get_file())
-	if d.file_exists(TEMP_PATH.get_file()):
-		d.remove(TEMP_PATH.get_file())
+	var save_file := _save_path().get_file()
+	var temp_file := _temp_path().get_file()
+	if d.file_exists(save_file):
+		d.remove(save_file)
+	if d.file_exists(temp_file):
+		d.remove(temp_file)
+
 
 func _migrate(payload: Dictionary, from_version: int) -> Dictionary:
 	if from_version > SCHEMA_VERSION:

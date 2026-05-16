@@ -1,15 +1,17 @@
 class_name WorldRoot
 extends Node3D
 
-const AUTOSAVE_INTERVAL := 60.0
-
-var _autosave_timer: float = 0.0
 var _local_player: Node3D = null
 var _initialized_local: bool = false
 
 
 func _ready() -> void:
-	# Static world setup that doesn't need a player ref.
+	# Host loads world-state saveables FIRST — GameState.world_seed must be
+	# restored before compute_placements() runs, or islands generate from the
+	# default seed and land in the wrong spots.
+	if multiplayer.is_server():
+		SaveSystem.load_or_init()
+
 	IslandRegistry.compute_placements()
 	var container := $IslandContainer as Node3D
 	WorldStream.set_container(container)
@@ -23,12 +25,8 @@ func _ready() -> void:
 	# Listen for player spawns; the spawner adds them under Players.
 	($Players as Node).child_entered_tree.connect(_on_player_added)
 
-	# Host loads world-state saveables (TimeOfDay, GameState, SkillManager, etc.)
-	# BEFORE players spawn — so when NetworkManager broadcasts time-of-day to
-	# joining guests, it sends the loaded value instead of the default zero.
-	# Player position save/load is deferred to Phase 8; players spawn at mainland.
-	if multiplayer.is_server():
-		SaveSystem.load_or_init()
+	# Autosave at daybreak instead of on a fixed timer.
+	EventBus.time_phase_changed.connect(_on_time_phase_changed)
 
 	# Tell NetworkManager we're ready so the server can spawn players into us.
 	NetworkManager.register_world_root(self)
@@ -47,24 +45,35 @@ func _on_player_added(p: Node) -> void:
 	_initialized_local = true
 	_local_player = p as Node3D
 
+	# Load this peer's profile (skills, inventory, player loadout/position)
+	# before world_loaded fires, so the starter-loadout grant sees restored
+	# items and the player applies its saved spawn position.
+	ProfileSave.load_or_init()
+
 	WorldStream.set_player(_local_player)  # emits world_loaded after first batch
 	($OceanFollower as OceanFollower).set_target(_local_player)
 
 
-func _process(delta: float) -> void:
+## Autosave whenever dawn breaks. Fires on every peer; gating below keeps the
+## world save host-only while every peer still saves its own profile.
+func _on_time_phase_changed(phase: int) -> void:
+	if phase != TimeOfDay.Phase.DAWN:
+		return
 	if _local_player == null or not _local_player.get("_world_ready"):
 		return
-	if not multiplayer.is_server():
-		return  # only host autosaves
-	_autosave_timer += delta
-	if _autosave_timer >= AUTOSAVE_INTERVAL:
-		_autosave_timer = 0.0
-		SaveSystem.save()
+	ProfileSave.save()            # every peer autosaves its own profile
+	if multiplayer.is_server():
+		NetworkManager.record_all_player_positions()
+		SaveSystem.save()         # host also autosaves the world
 
 
 func _exit_tree() -> void:
-	NetworkManager._world_root = null
-	if not multiplayer.is_server():
+	if not _initialized_local:
+		NetworkManager._world_root = null
 		return
-	GameState.last_played_at = int(Time.get_unix_time_from_system())
-	SaveSystem.save()
+	ProfileSave.save()            # every peer saves its own profile
+	if multiplayer.is_server():
+		NetworkManager.record_all_player_positions()
+		GameState.last_played_at = int(Time.get_unix_time_from_system())
+		SaveSystem.save()
+	NetworkManager._world_root = null

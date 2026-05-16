@@ -20,7 +20,7 @@ func physics_update(delta: float) -> void:
 		if _parry_timer <= 0.0:
 			player.is_parrying = false
 
-	if not Controls.block_held() or not player.has_shield():
+	if not Controls.block_held() or not player.has_shield:
 		actionSM.transition_to("idle")
 
 

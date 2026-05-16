@@ -48,7 +48,19 @@ func _ready() -> void:
 			call_deferred("_cmdline_autostart_client")
 
 
+## Cmdline auto-start skips the lobby UI, so no slot was picked. Use (creating
+## if needed) a "default" world + character so the dev path still boots.
+func _ensure_default_slots(need_world: bool) -> void:
+	if need_world and SaveSystem.current_world == "":
+		var worlds := SaveSystem.list_worlds()
+		SaveSystem.set_world(worlds[0] if worlds.size() > 0 else SaveSystem.create_world("default"))
+	if ProfileSave.current_character == "":
+		var chars := ProfileSave.list_characters()
+		ProfileSave.set_character(chars[0] if chars.size() > 0 else ProfileSave.create_character("default"))
+
+
 func _cmdline_autostart_host() -> void:
+	_ensure_default_slots(true)
 	start_host()
 	# Give a moment for any --join client on the same machine to connect, then load world.
 	await get_tree().create_timer(2.0).timeout
@@ -56,6 +68,7 @@ func _cmdline_autostart_host() -> void:
 
 
 func _cmdline_autostart_client() -> void:
+	_ensure_default_slots(false)
 	start_client(_enet_host_ip)
 	# Wait for host to issue _remote_load_world RPC.
 
@@ -175,11 +188,64 @@ func _on_peer_connected(peer_id: int) -> void:
 
 func _on_peer_disconnected(peer_id: int) -> void:
 	print("[NetworkManager] peer_disconnected: %d" % peer_id)
+	if multiplayer.is_server():
+		# Record this player's last position into the world save before their
+		# node is freed, then despawn it.
+		_record_player_position(peer_id)
+		_despawn_player(peer_id)
 	peers.erase(peer_id)
 	peer_player_left.emit(peer_id)
 	roster_changed.emit()
 	if multiplayer.is_server():
 		rpc("_sync_roster", peers)
+
+
+## Stable cross-session id for a peer. Prefers Steam id; falls back to peer id
+## (good enough for ENet dev where the host is always id 1).
+func get_stable_id(peer_id: int) -> String:
+	var sid := 0
+	if peer_id == multiplayer.get_unique_id():
+		sid = SteamLobby.steam_id if SteamLobby.available else 0
+	elif peers.has(peer_id):
+		sid = int(peers[peer_id].get("steam_id", 0))
+	return ("steam_%d" % sid) if sid != 0 else ("peer_%d" % peer_id)
+
+
+func _player_node(peer_id: int) -> Node:
+	if _world_root == null:
+		return null
+	var players := _world_root.get_node_or_null("Players")
+	if players == null:
+		return null
+	return players.get_node_or_null("Player_%d" % peer_id)
+
+
+func _record_player_position(peer_id: int) -> void:
+	var pnode := _player_node(peer_id)
+	if pnode == null:
+		return
+	PlayerStore.record(get_stable_id(peer_id), pnode.global_position, pnode.rotation.y)
+
+
+func _despawn_player(peer_id: int) -> void:
+	var pnode := _player_node(peer_id)
+	if pnode != null:
+		pnode.queue_free()
+
+
+## Snapshot every connected player's position into PlayerStore. Called by the
+## host before autosave and on world exit.
+func record_all_player_positions() -> void:
+	if not multiplayer.is_server() or _world_root == null:
+		return
+	var players := _world_root.get_node_or_null("Players")
+	if players == null:
+		return
+	for child in players.get_children():
+		var parts := String(child.name).split("_")
+		if parts.size() == 2 and parts[0] == "Player":
+			var pid := int(parts[1])
+			PlayerStore.record(get_stable_id(pid), child.global_position, child.rotation.y)
 
 
 func _on_server_disconnected() -> void:
@@ -256,8 +322,21 @@ func _spawn_player_for_peer(peer_id: int) -> void:
 	var p := scene.instantiate()
 	p.name = "Player_%d" % peer_id
 	p.set_multiplayer_authority(peer_id)
+	# Pre-place near the mainland before add_child so the synchronizer never
+	# replicates the (0,0,0) instantiation default. _on_world_loaded refines
+	# this to the exact spawn anchor or the player's saved position.
+	var mp := IslandRegistry.get_mainland_placement()
+	if mp != null:
+		p.position = mp.position + Vector3(0.0, 20.0, 0.0) + p._spawn_offset_for_peer(peer_id)
 	players.add_child(p, true)
 	print("[NetworkManager] spawned Player_%d" % peer_id)
+	# Restore the player's saved position from the world save, if any.
+	var rec := PlayerStore.get_record(get_stable_id(peer_id))
+	if not rec.is_empty():
+		if peer_id == multiplayer.get_unique_id():
+			p.apply_spawn_position(rec["pos"], rec["rot_y"])
+		else:
+			p.rpc_id(peer_id, "set_spawn_position", rec["pos"], rec["rot_y"])
 	# Push authoritative time + rate to the new player so their world starts in sync.
 	if peer_id != multiplayer.get_unique_id():
 		TimeOfDay.rpc_id(peer_id, "sync_time", TimeOfDay.game_minutes, TimeOfDay.current_rate)

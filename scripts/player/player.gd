@@ -49,12 +49,10 @@ var has_shield: bool = false:
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var _stamina_regen_timer: float = 999.0
+var _world_ready: bool = false  # true after _on_world_loaded places the player
 var _has_pending_pos: bool = false
 var _pending_pos: Vector3 = Vector3.ZERO
 var _pending_rot_y: float = 0.0
-var _world_ready: bool = false  # true after _on_world_loaded places the player
-var _save_pos: Vector3 = Vector3.ZERO
-var _save_rot_y: float = 0.0
 
 @onready var camera_pivot: Node3D  = $CameraPivot
 @onready var movementSM: Node      = $MovementStateMachine
@@ -96,9 +94,10 @@ func _ready() -> void:
 	$CameraPivot/SpringArm3D/Camera3D.make_current()
 	EventBus.player_hp_changed.emit.call_deferred(hp, max_hp)
 	EventBus.player_stamina_changed.emit.call_deferred(stamina, max_stamina)
-	if multiplayer.is_server():
-		# Host owns the world save. Guests use a separate profile (Phase 8).
-		SaveSystem.register(self)
+	# Inventory persists to this peer's local profile. Player POSITION lives in
+	# the host's world save (PlayerStore) — the host pushes it via the
+	# set_spawn_position RPC when this player spawns.
+	ProfileSave.register(inventory, "Inventory")
 
 
 func _on_inventory_changed() -> void:
@@ -128,10 +127,6 @@ func _update_shield_visual() -> void:
 		shield_mount.add_child(SHIELD_SCENE.instantiate())
 	elif not has_shield and existing != null:
 		existing.queue_free()
-
-
-func has_shield() -> bool:
-	return inventory.count_of(&"shield") > 0
 
 
 func take_pickup(item_id: StringName, count: int) -> void:
@@ -206,9 +201,16 @@ func _on_pause_pressed() -> void:
 func _on_reset_pressed() -> void:
 	SaveSystem.disable_save()
 	SaveSystem.delete_save()
+	ProfileSave.disable_save()
+	ProfileSave.delete_profile()
 	get_tree().paused = false
 	Controls.capture_mouse()
-	get_tree().reload_current_scene()
+	if NetworkManager.is_offline():
+		get_tree().reload_current_scene()
+	else:
+		# Reloading a networked scene breaks the spawn contract — drop to lobby.
+		NetworkManager.disconnect_all()
+		get_tree().change_scene_to_file("res://scenes/ui/LobbyMenu.tscn")
 
 
 func _on_spawn_boat_pressed() -> void:
@@ -243,23 +245,6 @@ func _regen_stamina(delta: float) -> void:
 		EventBus.player_stamina_changed.emit(stamina, max_stamina)
 
 
-func _exit_tree() -> void:
-	if _world_ready:
-		_save_pos = global_position
-		_save_rot_y = rotation.y
-
-
-func save_data() -> Dictionary:
-	if not _world_ready:
-		return {}
-	return {"position": V3Codec.encode(_save_pos), "rotation_y": _save_rot_y}
-
-
-func load_data(d: Dictionary) -> void:
-	if d.has("position"):
-		_pending_pos = V3Codec.decode(d["position"])
-		_pending_rot_y = float(d.get("rotation_y", 0.0))
-		_has_pending_pos = true
 
 
 func _try_spawn_boat() -> void:
@@ -294,6 +279,8 @@ func _on_world_loaded() -> void:
 	if inventory.count_of(&"shield") == 0:
 		inventory.add(&"shield", 1)
 
+	# Saved position from the profile wins; otherwise spawn at the mainland
+	# anchor offset to this peer's spawn slot.
 	if _has_pending_pos:
 		global_position = _pending_pos
 		rotation.y = _pending_rot_y
@@ -301,6 +288,29 @@ func _on_world_loaded() -> void:
 		global_position = _mainland_spawn_point() + _spawn_offset_for_peer(get_multiplayer_authority())
 	velocity = Vector3.ZERO
 	_world_ready = true
+
+
+## Sets the spawn position. If the world is already loaded, teleports
+## immediately; otherwise _on_world_loaded picks it up. Host calls this on its
+## own player directly and RPCs guests via set_spawn_position.
+func apply_spawn_position(pos: Vector3, rot_y: float) -> void:
+	_pending_pos = pos
+	_pending_rot_y = rot_y
+	_has_pending_pos = true
+	if _world_ready and is_multiplayer_authority():
+		global_position = pos
+		rotation.y = rot_y
+		velocity = Vector3.ZERO
+
+
+@rpc("any_peer", "reliable")
+func set_spawn_position(pos: Vector3, rot_y: float) -> void:
+	# Only the host assigns spawn positions. (This Player's multiplayer
+	# authority is the owning guest, so @rpc("authority") would reject the
+	# host's call — hence any_peer + an explicit server-sender check.)
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	apply_spawn_position(pos, rot_y)
 
 
 ## Deterministic per-peer offset around mainland anchor. Each peer arrives at a
