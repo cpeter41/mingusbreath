@@ -21,6 +21,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
 	Controls.chat_open_pressed.connect(_on_chat_open_pressed)
+	Controls.chat_slash_pressed.connect(_on_chat_slash_pressed)
 	EventBus.chat_message_received.connect(_on_message_received)
 
 
@@ -126,9 +127,16 @@ func _on_chat_open_pressed() -> void:
 	_open()
 
 
+func _on_chat_slash_pressed() -> void:
+	if get_tree().paused or _is_open:
+		return
+	# Pre-fill "/" so the player is immediately in command-entry mode.
+	_open("/")
+
+
 # ── Open / close ──────────────────────────────────────────────────────────────
 
-func _open() -> void:
+func _open(initial_text: String = "") -> void:
 	_is_open = true
 	Controls.input_blocked = true
 	Controls.allow_movement_while_blocked = false
@@ -137,8 +145,10 @@ func _open() -> void:
 	_history.modulate.a = 1.0
 	_background.visible = true
 	_input_line.visible = true
-	_input_line.text = ""
+	_input_line.text = initial_text
 	_input_line.grab_focus()
+	# Move caret to end so typing appends after any pre-filled text.
+	_input_line.set_caret_column(_input_line.text.length())
 
 
 func _close() -> void:
