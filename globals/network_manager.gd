@@ -334,6 +334,20 @@ func _damage_event(attacker_path: NodePath, target_path: NodePath, weapon_id: St
 	EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)
 
 
+## Broadcast a chat message to every connected peer. call_local so the sender
+## also sees their own message without a special-case path.
+func broadcast_chat(sender_name: String, text: String) -> void:
+	if multiplayer.multiplayer_peer == null:
+		EventBus.chat_message_received.emit(sender_name, text)
+		return
+	_chat_event.rpc(sender_name, text)
+
+
+@rpc("any_peer", "reliable", "call_local")
+func _chat_event(sender_name: String, text: String) -> void:
+	EventBus.chat_message_received.emit(sender_name, text)
+
+
 func _change_to_world_scene() -> void:
 	get_tree().change_scene_to_file(WORLD_SCENE_PATH)
 	print("[NetworkManager] changed scene to %s" % WORLD_SCENE_PATH)
