@@ -25,7 +25,8 @@ func _on_area_entered(area: Area3D) -> void:
 	if target == attacker:
 		return
 	var amount   := CombatResolver.resolve(attacker, target, weapon_id, damage, skill_id)
-	EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)
+	# Networked: re-emits damage_dealt on every peer (incl. this one).
+	NetworkManager.broadcast_damage(attacker, target, weapon_id, skill_id, amount)
 	SkillManager.add_xp(skill_id, amount * 0.1)
 	if target.has_method("take_damage"):
 		target.take_damage(amount, attacker)

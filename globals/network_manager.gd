@@ -303,6 +303,27 @@ func _sync_roster(new_roster: Dictionary) -> void:
 	roster_changed.emit()
 
 
+## Networked damage event. The attacker's peer calls this; it re-emits
+## EventBus.damage_dealt on every peer (call_local covers the attacker) so
+## HUDs / audio / VFX on all clients see the hit. Nodes are passed as paths
+## since Node references can't cross the wire.
+func broadcast_damage(attacker: Node, target: Node, weapon_id: StringName, skill_id: StringName, amount: float) -> void:
+	var ap: NodePath = attacker.get_path() if attacker != null else NodePath()
+	var tp: NodePath = target.get_path() if target != null else NodePath()
+	if multiplayer.multiplayer_peer == null:
+		# Offline — no peers to notify; emit directly.
+		EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)
+		return
+	_damage_event.rpc(ap, tp, weapon_id, skill_id, amount)
+
+
+@rpc("any_peer", "reliable", "call_local")
+func _damage_event(attacker_path: NodePath, target_path: NodePath, weapon_id: StringName, skill_id: StringName, amount: float) -> void:
+	var attacker := get_node_or_null(attacker_path)
+	var target := get_node_or_null(target_path)
+	EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)
+
+
 func _change_to_world_scene() -> void:
 	get_tree().change_scene_to_file(WORLD_SCENE_PATH)
 	print("[NetworkManager] changed scene to %s" % WORLD_SCENE_PATH)
