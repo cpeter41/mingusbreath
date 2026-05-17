@@ -11,6 +11,12 @@ func get_name() -> StringName:
 func get_aliases() -> Array[StringName]:
 	return []
 
+# Category controls who may run this command. Must match one of the subfolder
+# names: &"default" (all players), &"debug" (all players for now),
+# &"admin" (host / solo only). Override in subclasses placed in debug/ or admin/.
+func get_category() -> StringName:
+	return &"default"
+
 # args is the tokenised remainder after the command name (space-split, no "/").
 func execute(args: Array) -> String:
 	return ""

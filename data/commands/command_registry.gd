@@ -4,8 +4,10 @@ extends Node
 # one const line in the right section and one entry in _build_commands().
 
 # ── Default commands ──────────────────────────────────────────────────────────
+const _HelpCommand := preload("res://data/commands/default/cmd_help.gd")
 
 # ── Debug commands ────────────────────────────────────────────────────────────
+const _GotoCommand := preload("res://data/commands/debug/cmd_goto.gd")
 
 # ── Admin commands ────────────────────────────────────────────────────────────
 
@@ -31,7 +33,10 @@ func all_commands() -> Array:
 
 
 func _build_commands() -> Array:
-	return []
+	return [
+		_HelpCommand.new(),
+		_GotoCommand.new(),
+	]
 
 
 func _on_command_entered(text: String) -> void:
@@ -43,6 +48,14 @@ func _on_command_entered(text: String) -> void:
 	var cmd: ChatCommand = _commands.get(cmd_name, null)
 	if cmd == null:
 		_reply("Unknown command: /%s" % parts[0])
+		return
+	# Permission check.
+	# admin — host or solo only.
+	# debug — any player for now; restrict to host once debug access is finalised.
+	# default — any player.
+	var category := cmd.get_category()
+	if category == &"admin" and not multiplayer.is_server():
+		_reply("You do not have permission to use that command.")
 		return
 	var reply := cmd.execute(args)
 	if not reply.is_empty():
