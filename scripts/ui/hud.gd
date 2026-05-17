@@ -30,6 +30,10 @@ func _ready() -> void:
 	_add_coords_label()
 	_add_biome_label()
 
+	var chat := ChatPanel.new()
+	chat.name = "ChatPanel"
+	add_child(chat)
+
 	var legend := ControlsLegend.new()
 	legend.name = "ControlsLegend"
 	add_child(legend)

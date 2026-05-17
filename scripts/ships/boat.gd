@@ -25,6 +25,11 @@ const RUDDER_FULL_SPEED := 6.0    # m/s — above this, full authority
 # Replicated state.
 var throttle: float = 0.0
 var mounted_peers: Array = []     # peer ids; index = deck slot, [0] = driver
+var owner_peer_id: int = 0        # which peer spawned this boat; 0 = unclaimed
+
+# Host-only; not replicated. Stable cross-session id so the boat can be
+# reassigned to the right peer on world reload when peer ids differ.
+var stable_owner_id: String = ""
 
 var _buoyancy: Buoyancy = null
 var _drive_throttle: float = 0.0  # latest driver input (server-side only)
