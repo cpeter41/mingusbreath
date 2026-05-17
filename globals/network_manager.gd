@@ -37,6 +37,7 @@ func _ready() -> void:
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
+	multiplayer.connected_to_server.connect(_on_connected_to_server)
 
 	# Auto-start based on cmdline so two Godot instances can be wired up via run args.
 	if _use_enet_fallback:
@@ -200,15 +201,34 @@ func _on_peer_disconnected(peer_id: int) -> void:
 		rpc("_sync_roster", peers)
 
 
-## Stable cross-session id for a peer. Prefers Steam id; falls back to peer id
-## (good enough for ENet dev where the host is always id 1).
+## Stable cross-session id for a peer. Keyed by the player's chosen character
+## slot name — stable across sessions and ENet peer-id reassignment. Falls back
+## to peer id only if the character is unknown.
 func get_stable_id(peer_id: int) -> String:
-	var sid := 0
 	if peer_id == multiplayer.get_unique_id():
-		sid = SteamLobby.steam_id if SteamLobby.available else 0
+		if ProfileSave.current_character != "":
+			return "char_" + ProfileSave.current_character
 	elif peers.has(peer_id):
-		sid = int(peers[peer_id].get("steam_id", 0))
-	return ("steam_%d" % sid) if sid != 0 else ("peer_%d" % peer_id)
+		var c: String = peers[peer_id].get("character", "")
+		if c != "":
+			return "char_" + c
+	return "peer_%d" % peer_id
+
+
+## Guest tells the host which character slot it is using, so the host can key
+## that player's saved position by a stable name.
+func _on_connected_to_server() -> void:
+	_register_character.rpc_id(1, ProfileSave.current_character)
+
+
+@rpc("any_peer", "reliable")
+func _register_character(char_name: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender := multiplayer.get_remote_sender_id()
+	if not peers.has(sender):
+		peers[sender] = {"steam_id": 0, "display_name": "Peer_%d" % sender}
+	peers[sender]["character"] = char_name
 
 
 func _player_node(peer_id: int) -> Node:
@@ -330,9 +350,11 @@ func _spawn_player_for_peer(peer_id: int) -> void:
 		p.position = mp.position + Vector3(0.0, 20.0, 0.0) + p._spawn_offset_for_peer(peer_id)
 	players.add_child(p, true)
 	print("[NetworkManager] spawned Player_%d" % peer_id)
-	# Restore the player's saved position from the world save, if any.
+	# Restore the player's saved position from the world save, if any. Reject a
+	# record near the world origin — that's a stale (0,0,0) artifact, not a real
+	# saved spot; falling through lets the player spawn at the mainland anchor.
 	var rec := PlayerStore.get_record(get_stable_id(peer_id))
-	if not rec.is_empty():
+	if not rec.is_empty() and Vector2(rec["pos"].x, rec["pos"].z).length() > 10.0:
 		if peer_id == multiplayer.get_unique_id():
 			p.apply_spawn_position(rec["pos"], rec["rot_y"])
 		else:

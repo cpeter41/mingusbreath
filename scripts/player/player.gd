@@ -7,7 +7,6 @@ extends CharacterBody3D
 const MOUSE_SENSITIVITY := 0.003
 const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
 const SHIELD_SCENE  := preload("res://scenes/weapons/Shield.tscn")
-const BOAT_SCENE    := preload("res://scenes/ships/Boat.tscn")
 const RESPAWN_FALLBACK_Y := 15.0
 const BOAT_SPAWN_DIST := 8.0
 
@@ -53,6 +52,9 @@ var _world_ready: bool = false  # true after _on_world_loaded places the player
 var _has_pending_pos: bool = false
 var _pending_pos: Vector3 = Vector3.ZERO
 var _pending_rot_y: float = 0.0
+var _boat: Boat = null            # boat this player is mounted on, else null
+var _saved_col_layer: int = 0
+var _saved_col_mask: int = 0
 
 @onready var camera_pivot: Node3D  = $CameraPivot
 @onready var movementSM: Node      = $MovementStateMachine
@@ -90,6 +92,7 @@ func _ready() -> void:
 	Controls.pause_pressed.connect(_on_pause_pressed)
 	Controls.reset_pressed.connect(_on_reset_pressed)
 	Controls.spawn_boat_pressed.connect(_on_spawn_boat_pressed)
+	Controls.interact_pressed.connect(_on_interact_pressed)
 	Controls.mouse_look.connect(_on_mouse_look)
 	$CameraPivot/SpringArm3D/Camera3D.make_current()
 	EventBus.player_hp_changed.emit.call_deferred(hp, max_hp)
@@ -220,8 +223,6 @@ func _on_spawn_boat_pressed() -> void:
 
 
 func _on_mouse_look(delta: Vector2) -> void:
-	if on_boat:
-		return
 	rotate_y(-delta.x * MOUSE_SENSITIVITY)
 	camera_pivot.rotate_x(-delta.y * MOUSE_SENSITIVITY)
 	camera_pivot.rotation.x = clamp(
@@ -231,11 +232,50 @@ func _on_mouse_look(delta: Vector2) -> void:
 
 func _physics_process(delta: float) -> void:
 	_regen_stamina(delta)
+	_update_boat_state()
 	if on_boat:
+		_ride_boat()
 		return  # Boat owns transform; skip movement, action, and move_and_slide.
 	movementSM.physics_update(delta)
 	actionSM.physics_update(delta)
 	move_and_slide()
+
+
+## Derives boat membership from the (replicated) mounted_peers list of each
+## boat. Handles the local mount/dismount collision toggle on transitions.
+func _update_boat_state() -> void:
+	var my_id := get_multiplayer_authority()
+	var found: Boat = null
+	for b in get_tree().get_nodes_in_group("boat"):
+		if my_id in (b as Boat).mounted_peers:
+			found = b as Boat
+			break
+	var was := on_boat
+	_boat = found
+	on_boat = found != null
+	if on_boat and not was:
+		_saved_col_layer = collision_layer
+		_saved_col_mask = collision_mask
+		collision_layer = 0
+		collision_mask = 0
+	elif was and not on_boat:
+		collision_layer = _saved_col_layer
+		collision_mask = _saved_col_mask
+		velocity = Vector3.ZERO
+
+
+## Snap to the assigned deck slot; if driver, forward steering input.
+func _ride_boat() -> void:
+	if _boat == null or not is_instance_valid(_boat):
+		return
+	var my_id := get_multiplayer_authority()
+	var slot: int = _boat.slot_of(my_id)
+	if slot < 0:
+		return
+	global_position = _boat.deck_slot_transform(slot).origin
+	velocity = Vector3.ZERO
+	if _boat.is_driver(my_id):
+		_boat.submit_drive(Controls.throttle_axis(), Controls.rudder_axis())
 
 
 func _regen_stamina(delta: float) -> void:
@@ -253,16 +293,26 @@ func _try_spawn_boat() -> void:
 	spawn_pos.y = 0.0
 	if WorldStream.get_placement_enclosing(spawn_pos) != null:
 		return
-	var existing := BoatManager.get_existing_boat()
-	if existing != null:
-		existing.global_position = spawn_pos
-		existing.rotation.y = rotation.y
+	# Boats are server-spawned; route the request to the host.
+	BoatManager.request_spawn_boat.rpc_id(1, spawn_pos, rotation.y)
+
+
+## Interact: dismount if on a boat, else mount the nearest boat in range.
+func _on_interact_pressed() -> void:
+	var my_id := get_multiplayer_authority()
+	if on_boat and _boat != null:
+		_boat.request_dismount.rpc_id(1, my_id)
 		return
-	var boat := BOAT_SCENE.instantiate() as Boat
-	boat.rotation.y = rotation.y
-	get_parent().add_child(boat)
-	boat.global_position = spawn_pos
-	BoatManager.register_boat(boat)
+	var nearest: Boat = null
+	var best := Boat.MOUNT_RADIUS
+	for b in get_tree().get_nodes_in_group("boat"):
+		var boat := b as Boat
+		var d := global_position.distance_to(boat.global_position)
+		if d <= best:
+			best = d
+			nearest = boat
+	if nearest != null:
+		nearest.request_mount.rpc_id(1, my_id)
 
 
 const SPAWN_RING_RADIUS := 3.0

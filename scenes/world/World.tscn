@@ -136,4 +136,11 @@ _spawnable_scenes = PackedStringArray("res://scenes/player/Player.tscn")
 spawn_path = NodePath("../Players")
 spawn_limit = 4
 
+[node name="Boats" type="Node3D" parent="."]
+
+[node name="BoatSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/ships/Boat.tscn")
+spawn_path = NodePath("../Boats")
+spawn_limit = 8
+
 [node name="ZoneDebug" parent="." instance=ExtResource("9_zd")]
