@@ -178,13 +178,11 @@ func _on_peer_connected(peer_id: int) -> void:
 		peer_player_joined.emit(peer_id, steam_id)
 		# Broadcast full roster to all peers so guest UIs can render it.
 		rpc("_sync_roster", peers)
-		# If we've already entered the world, push the new guest into it too,
-		# then spawn their Player after they finish the scene change.
+		# If we've already entered the world, push the new guest into it too.
+		# Spawn is deferred to _guest_world_ready so the player only replicates
+		# once the guest's scene tree (and MultiplayerSpawner) is actually ready.
 		if _world_loaded:
 			rpc_id(peer_id, "_remote_load_world")
-			# Defer a bit so the guest's scene swap completes before spawn replicates.
-			await get_tree().create_timer(1.0).timeout
-			_spawn_player_for_peer(peer_id)
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
@@ -303,6 +301,18 @@ func _sync_roster(new_roster: Dictionary) -> void:
 	roster_changed.emit()
 
 
+## Guest calls this from WorldRoot._ready() once its scene tree is fully set up
+## so the MultiplayerSpawner can receive the replicated Player spawn immediately.
+## Replaces the old fixed 1-second timer in _on_peer_connected.
+@rpc("any_peer", "reliable")
+func _guest_world_ready() -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if peers.has(peer_id) and _world_loaded:
+		_spawn_player_for_peer(peer_id)
+
+
 ## Networked damage event. The attacker's peer calls this; it re-emits
 ## EventBus.damage_dealt on every peer (call_local covers the attacker) so
 ## HUDs / audio / VFX on all clients see the hit. Nodes are passed as paths
@@ -342,8 +352,8 @@ func register_world_root(wr: Node) -> void:
 	if _world_root == null:
 		return
 	_spawn_player_for_peer(multiplayer.get_unique_id())
-	for peer_id in peers.keys():
-		_spawn_player_for_peer(peer_id)
+	# Guests are spawned via _guest_world_ready once they signal their scene is
+	# ready; spawning them here would race the MultiplayerSpawner on slow clients.
 
 
 func _spawn_player_for_peer(peer_id: int) -> void:
@@ -383,3 +393,6 @@ func _spawn_player_for_peer(peer_id: int) -> void:
 	# Push authoritative time + rate to the new player so their world starts in sync.
 	if peer_id != multiplayer.get_unique_id():
 		TimeOfDay.rpc_id(peer_id, "sync_time", TimeOfDay.game_minutes, TimeOfDay.current_rate)
+	# Reconnect any saved boat whose stable_owner_id matches this peer so it gets
+	# a valid owner_peer_id for the current session.
+	BoatManager.assign_owner_peer_from_stable_id(get_stable_id(peer_id), peer_id)

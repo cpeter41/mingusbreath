@@ -30,6 +30,10 @@ func _ready() -> void:
 
 	# Tell NetworkManager we're ready so the server can spawn players into us.
 	NetworkManager.register_world_root(self)
+	# Guest handshake: signal host that this scene tree is fully built so the host
+	# spawns the Player only after MultiplayerSpawner is ready to receive it.
+	if not multiplayer.is_server() and multiplayer.multiplayer_peer != null:
+		NetworkManager._guest_world_ready.rpc_id(1)
 
 
 func _on_player_added(p: Node) -> void:

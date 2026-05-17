@@ -72,7 +72,11 @@ func _ready() -> void:
 	# place to set it.
 	var parts := name.split("_")
 	if parts.size() == 2 and parts[0] == "Player":
-		set_multiplayer_authority(int(parts[1]), true)
+		var peer_id := int(parts[1])
+		# If this fires, NetworkManager named the node incorrectly; authority will
+		# default to the server and the owning client loses input control silently.
+		assert(peer_id > 0, "Player name has invalid peer_id: " + name)
+		set_multiplayer_authority(peer_id, true)
 
 	hp = max_hp
 	stamina = max_stamina
@@ -293,8 +297,8 @@ func _try_spawn_boat() -> void:
 	spawn_pos.y = 0.0
 	if WorldStream.get_placement_enclosing(spawn_pos) != null:
 		return
-	# Boats are server-spawned; route the request to the host.
-	BoatManager.request_spawn_boat.rpc_id(1, spawn_pos, rotation.y)
+	# Boats are server-spawned; pass owner_peer_id so each player manages their own boat.
+	BoatManager.request_spawn_boat.rpc_id(1, spawn_pos, rotation.y, get_multiplayer_authority())
 
 
 ## Interact: dismount if on a boat, else mount the nearest boat in range.

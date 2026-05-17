@@ -11,7 +11,9 @@ enum Phase { DAWN, DAY, DUSK, NIGHT }
 @export var tint_dusk:  Color = Color(0.90, 0.50, 0.30)
 @export var tint_night: Color = Color(0.15, 0.18, 0.30)
 
-const ACCEL_BROADCAST_INTERVAL := 1.0  # while T held, host re-broadcasts every 1s
+const ACCEL_BROADCAST_INTERVAL := 1.0   # while T held, host re-broadcasts every 1s
+# Periodic re-anchor so guests don't drift if T is never pressed in a long session.
+const PERIODIC_SYNC_INTERVAL    := 30.0
 
 var game_minutes: float = 0.0
 var phase: Phase = Phase.DAY
@@ -21,7 +23,8 @@ var current_rate: float = 1.0
 
 var _sun: DirectionalLight3D = null
 var _env: Environment = null
-var _accel_timer: float = 0.0     # counts elapsed while T held; broadcasts at INTERVAL
+var _accel_timer: float = 0.0       # counts elapsed while T held; broadcasts at INTERVAL
+var _periodic_timer: float = 0.0    # re-anchors guest clocks every PERIODIC_SYNC_INTERVAL
 var _was_accelerating: bool = false
 
 
@@ -58,25 +61,32 @@ func _process(delta: float) -> void:
 		_env.ambient_light_color = _compute_tint()
 
 
-## Server-side accel broadcast pacing. While T is held, accumulate a timer; once
-## it crosses ACCEL_BROADCAST_INTERVAL, push current state to all clients and
-## restart the timer (so it fires again on the NEXT 1s, not immediately if T
-## keeps being held). When T is released, send one final sync so guests stop
-## ticking at the accel rate.
+## Server-side broadcast pacing. Three triggers share a single rpc call:
+##   1. While T held: every ACCEL_BROADCAST_INTERVAL (1s).
+##   2. On T release: one final sync so guests revert to base rate.
+##   3. Periodic: every PERIODIC_SYNC_INTERVAL (30s) regardless of T, so guest
+##      clocks re-anchor even in sessions where T is never touched.
 func _tick_accel_broadcast(delta: float, accelerating: bool) -> void:
 	if multiplayer.multiplayer_peer == null:
 		return
+	var do_sync := false
+	# Periodic re-anchor — prevents slow drift over long sessions.
+	_periodic_timer += delta
+	if _periodic_timer >= PERIODIC_SYNC_INTERVAL:
+		_periodic_timer = 0.0
+		do_sync = true
 	if accelerating:
 		_accel_timer += delta
 		if _accel_timer >= ACCEL_BROADCAST_INTERVAL:
 			_accel_timer = 0.0
-			rpc("sync_time", game_minutes, current_rate)
+			do_sync = true
 		_was_accelerating = true
-		return
-	if _was_accelerating:
+	elif _was_accelerating:
 		# T just released — push one final sync so guests revert to base rate.
 		_was_accelerating = false
 		_accel_timer = 0.0
+		do_sync = true
+	if do_sync:
 		rpc("sync_time", game_minutes, current_rate)
 
 
