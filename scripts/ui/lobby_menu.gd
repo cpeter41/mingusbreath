@@ -105,11 +105,13 @@ func _select_dropdown_text(dd: OptionButton, text: String) -> void:
 func _on_world_selected(idx: int) -> void:
 	SaveSystem.set_world(_world_dropdown.get_item_text(idx))
 	_refresh_buttons()
+	_refresh_roster()
 
 
 func _on_char_selected(idx: int) -> void:
 	ProfileSave.set_character(_char_dropdown.get_item_text(idx))
 	_refresh_buttons()
+	_refresh_roster()
 
 
 func _on_world_add() -> void:
@@ -123,6 +125,7 @@ func _on_world_add() -> void:
 	SaveSystem.set_world(created)
 	_set_status("Created world '%s'" % created)
 	_refresh_buttons()
+	_refresh_roster()
 
 
 func _on_char_add() -> void:
@@ -136,6 +139,7 @@ func _on_char_add() -> void:
 	ProfileSave.set_character(created)
 	_set_status("Created character '%s'" % created)
 	_refresh_buttons()
+	_refresh_roster()
 
 
 # ── Host / join / solo ───────────────────────────────────────────

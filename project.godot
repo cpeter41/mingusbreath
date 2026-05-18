@@ -34,7 +34,7 @@ InventoryRegistry="*res://globals/inventory_registry.gd"
 DiscoveryLog="*res://globals/discovery_log.gd"
 AudioDirector="*res://globals/audio_director.gd"
 BoatManager="*res://globals/boat_manager.gd"
-CommandRegistry="*res://data/commands/command_registry.gd"
+CommandRegistry="*res://scripts/commands/command_registry.gd"
 Controls="*res://globals/controls.gd"
 
 [input]

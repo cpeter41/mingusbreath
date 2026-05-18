@@ -77,6 +77,14 @@ func _exit_tree() -> void:
 		return
 	ProfileSave.save()            # every peer saves its own profile
 	if multiplayer.is_server():
+		# Host never fires _on_peer_disconnected for their own peer, so record
+		# their position explicitly before any node teardown can invalidate it.
+		if _local_player != null and is_instance_valid(_local_player):
+			PlayerStore.record(
+				NetworkManager.get_stable_id(multiplayer.get_unique_id()),
+				_local_player.global_position,
+				_local_player.rotation.y
+			)
 		NetworkManager.record_all_player_positions()
 		GameState.last_played_at = int(Time.get_unix_time_from_system())
 		SaveSystem.save()
