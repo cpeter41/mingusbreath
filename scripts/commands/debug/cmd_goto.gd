@@ -1,6 +1,6 @@
 extends ChatCommand
 
-const RAYCAST_HEIGHT   := 500.0  # cast from this Y downward
+const RAYCAST_HEIGHT   := 1000.0 # cast from this Y downward
 const WATER_LEVEL_Y    := 0.0    # fallback when no terrain under target point
 const TERRAIN_OFFSET_Y := 0.1    # nudge above hit surface so player doesn't clip
 

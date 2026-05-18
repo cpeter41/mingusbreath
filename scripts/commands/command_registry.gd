@@ -4,10 +4,10 @@ extends Node
 # one const line in the right section and one entry in _build_commands().
 
 # ── Default commands ──────────────────────────────────────────────────────────
-const _HelpCommand := preload("res://data/commands/default/cmd_help.gd")
+const _HelpCommand := preload("res://scripts/commands/default/cmd_help.gd")
 
 # ── Debug commands ────────────────────────────────────────────────────────────
-const _GotoCommand := preload("res://data/commands/debug/cmd_goto.gd")
+const _GotoCommand := preload("res://scripts/commands/debug/cmd_goto.gd")
 
 # ── Admin commands ────────────────────────────────────────────────────────────
 
