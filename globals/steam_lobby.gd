@@ -17,6 +17,13 @@ var steam_name: String = ""
 
 
 func _ready() -> void:
+	# Steam init is opt-in: only when launched with --steam. Without it, the
+	# Steam client would show "Now Playing: Spacewar" (test AppID 480) on every
+	# launch. ENet/LAN play needs no Steam, so default to skipping it.
+	if "--steam" not in OS.get_cmdline_args():
+		print("[SteamLobby] no --steam flag — skipping Steam init. ENet fallback only.")
+		return
+
 	if not Engine.has_singleton("Steam"):
 		print("[SteamLobby] Steam singleton missing — GodotSteam not loaded. ENet fallback only.")
 		return
