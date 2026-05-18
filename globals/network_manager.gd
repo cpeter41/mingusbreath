@@ -23,7 +23,7 @@ const LOBBY_SCENE_PATH := "res://scenes/ui/LobbyMenu.tscn"
 const HUSK_SCENE := "res://scenes/enemies/Husk.tscn"
 
 var mode: int = Mode.OFFLINE
-var local_peer_id: int = 1
+var local_peer_id := 1
 var peers: Dictionary = {}  # peer_id -> {steam_id, display_name}
 
 var _use_enet_fallback: bool = false

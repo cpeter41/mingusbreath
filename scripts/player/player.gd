@@ -47,6 +47,10 @@ var has_shield: bool = false:
 @export var speed: float = 5.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
+# Owning peer id, parsed from the node name in _enter_tree. Equals
+# get_multiplayer_authority(). Defaults to 1 (host) until parsed.
+var peer_id: int = 1
+
 var _stamina_regen_timer: float = 999.0
 var _world_ready: bool = false  # true after _on_world_loaded places the player
 var _has_pending_pos: bool = false
@@ -74,7 +78,7 @@ var _saved_col_mask: int = 0
 func _enter_tree() -> void:
 	var parts := name.split("_")
 	if parts.size() == 2 and parts[0] == "Player":
-		var peer_id := int(parts[1])
+		peer_id = int(parts[1])
 		# If this fires, NetworkManager named the node incorrectly; authority will
 		# default to the server and the owning client loses input control silently.
 		assert(peer_id > 0, "Player name has invalid peer_id: " + name)

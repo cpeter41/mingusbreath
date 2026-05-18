@@ -13,6 +13,12 @@ var current_world: String = ""
 
 var _saveables: Array[Node] = []
 var _save_disabled: bool = false
+# True only on the peer that owns this world save (host or solo). Captured in
+# load_or_init while the peer state is still accurate. A returning client must
+# NOT use multiplayer.is_server() at save time — disconnect_all restores an
+# OfflineMultiplayerPeer, which makes is_server() report true and would let an
+# ex-client clobber the host's world save with its own empty state.
+var _is_world_owner: bool = false
 
 
 func _ready() -> void:
@@ -74,9 +80,9 @@ func _migrate_legacy_save() -> void:
 func save() -> bool:
 	if _save_disabled:
 		return true
-	# World save is host-owned. Guests skip — their per-peer state lives in
-	# ProfileSave (user://characters/<name>.dat).
-	if not multiplayer.is_server():
+	# World save is host-owned. Guests (and ex-guests back in the lobby) skip —
+	# their per-peer state lives in ProfileSave (user://characters/<name>.dat).
+	if not _is_world_owner:
 		return true
 	if current_world == "":
 		push_warning("SaveSystem: save() with no world selected — skipped")
@@ -113,9 +119,12 @@ func save() -> bool:
 
 func load_or_init() -> void:
 	_save_disabled = false
+	# Capture ownership now, while the peer state is accurate (host = ENet
+	# server, guest = ENet client, solo = offline peer). save() relies on this.
+	_is_world_owner = multiplayer.is_server()
 	# Only the host loads world state. Guests receive world state via
 	# replication once spawned.
-	if not multiplayer.is_server():
+	if not _is_world_owner:
 		return
 	for i in range(_saveables.size() - 1, -1, -1):
 		if not is_instance_valid(_saveables[i]):
