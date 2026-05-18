@@ -26,6 +26,11 @@ else
     add_args+=(-a "res://tests/unit" -a "res://tests/integration")
 fi
 
+if [ ! -f "$project_root/addons/gdUnit4/runtest.sh" ]; then
+    echo "gdUnit4 not installed. Run: tests/install_gdunit4.sh" >&2
+    exit 1
+fi
+
 cd "$project_root"
 set +e
 bash addons/gdUnit4/runtest.sh --godot_binary "$godot" "${add_args[@]}" \

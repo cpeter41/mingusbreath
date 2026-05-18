@@ -18,15 +18,16 @@ There is no build step — this is a Godot project edited and run through the ed
 
 ## Tests
 
-The project uses **GdUnit4** (`addons/gdUnit4/`, vendored + version-pinned). Tests live under `tests/`, whose subdirs mirror `scripts/` — a change to `scripts/world/island_placement.gd` is tested in `tests/unit/world/`.
+The project uses **GdUnit4** (v6.1.3, pinned). Tests live under `tests/`, whose subdirs mirror `scripts/` — a change to `scripts/world/island_placement.gd` is tested in `tests/unit/world/`.
 
+- **Setup** (once per checkout): `pwsh tests/install_gdunit4.ps1` installs the framework into `addons/gdUnit4/` (gitignored, not vendored), then `godot --headless --path . --import` refreshes the class cache.
 - **Run all tests**: `pwsh tests/run_tests.ps1` (POSIX mirror: `tests/run_tests.sh`). Runs GdUnit4 headless, propagates a pass/fail exit code, writes JUnit XML to `tests/.results/`.
 - **Run a subset**: pass a dir or file — `pwsh tests/run_tests.ps1 unit/world`.
 - **Layout**: `tests/unit/` (pure logic, no scene tree), `tests/integration/` (scene tree + autoloads), `tests/multiplayer/` (two-peer harness), `tests/helpers/` (shared `GameTest` base, fake-node factory, autoload reset), `tests/fixtures/` (test `.tres` + golden snapshots).
 - **After any code change, agents run the test suite** and confirm a clean pass before reporting done.
 - Test classes extend `GdUnitTestSuite`; the project base `GameTest` adds determinism + golden-snapshot helpers.
 
-Suite is built in phases — see `docs/planning/` for the testing plan. Until Phase 0 lands, `tests/` holds only `.gdkeep`.
+Suite is built in phases — see `docs/planning/tests/TESTING_PLAN.md`. Phases 0–2 are done (28 unit tests); integration and multiplayer phases are pending.
 
 ## Architecture
 

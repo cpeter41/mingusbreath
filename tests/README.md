@@ -1,7 +1,18 @@
 # Tests
 
-Automated tests for Mingusbreath, built on **GdUnit4** (vendored at
-`addons/gdUnit4/`, pinned to v6.1.3).
+Automated tests for Mingusbreath, built on **GdUnit4** (pinned to v6.1.3).
+
+## Setup
+
+GdUnit4 is not committed to the repo — install it once per checkout:
+
+```sh
+pwsh tests/install_gdunit4.ps1            # POSIX: tests/install_gdunit4.sh
+godot --headless --path . --import        # refresh the class cache
+```
+
+The install script clones the pinned v6.1.3 tag into `addons/gdUnit4/`
+(which is gitignored). CI must run this step before the suite.
 
 ## Running
 

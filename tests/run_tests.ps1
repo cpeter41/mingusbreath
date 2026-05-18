@@ -32,6 +32,10 @@ if ($Target) {
 }
 
 $runner = Join-Path $projectRoot 'addons\gdUnit4\runtest.cmd'
+if (-not (Test-Path -LiteralPath $runner)) {
+    Write-Error "gdUnit4 not installed. Run: pwsh tests/install_gdunit4.ps1"
+    exit 1
+}
 
 Push-Location $projectRoot
 try {

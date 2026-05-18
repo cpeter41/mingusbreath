@@ -30,7 +30,6 @@ desktop.ini
 NVIDIA Corporation
 
 # Plugins — install separately per environment. GodotSteam from godotsteam.com.
-addons/*
-# gdUnit4 is vendored + version-pinned (test framework) — keep it tracked.
-!addons/gdUnit4/
+# gdUnit4 (test framework) — install via tests/install_gdunit4.ps1.
+addons/
 steam_appid.txt
