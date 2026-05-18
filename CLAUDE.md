@@ -58,6 +58,19 @@ Everything generative (island layout, placement) derives deterministically from 
 
 `scenes/` mirrors `scripts/` for predictable navigation. `data/` holds `.tres` Resource content (items, biomes, enemies, skills) with no logic — schemas live in `scripts/data/*.gd`. `scenes/dev/` holds throwaway sandboxes (not shipped). Chat/console commands live under `scripts/commands/` (`CommandRegistry` autoload + `default/` and `debug/` command scripts).
 
+## GDScript conventions
+
+Match the existing code when editing:
+
+- **Static typing everywhere** — typed vars (`var x: float`), inferred-typed locals (`var d := 1.0`), typed params and return types (`func f(n: Node) -> void:`). Untyped declarations are the exception, not the norm.
+- **Tabs** for indentation (Godot standard; pinned in `.editorconfig`).
+- Files that define a reusable type start with `class_name X` then `extends Y`. Autoload scripts omit `class_name`.
+- `StringName` literals use the `&"..."` prefix; default to `&""`.
+- Leading underscore marks private members and intentionally-unused params (`_attacker`, `_apply_gravity`).
+- Autoloads are referenced by their global name directly (`SkillManager.get_level(...)`, `Controls.move_vector()`) — never looked up via the scene tree.
+- Constants `SCREAMING_SNAKE_CASE`; functions/vars `snake_case`.
+- Linting: `gdlint` (gdtoolkit) — installed via `pip install gdtoolkit`. Default rules include a 100-char line limit and a 6-return-per-function cap. Format with `gdformat`.
+
 ## Reference
 
 - `docs/planning/ARCHITECTURE.md` — full system design (note: written single-player-first; multiplayer was retrofitted afterward).

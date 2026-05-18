@@ -18,7 +18,9 @@ func spawn_loot(item_id: StringName, count: int, world_pos: Vector3) -> ItemPick
 		push_warning("[PickupManager] /World/Pickups container missing")
 		return null
 	if container.get_child_count() >= PICKUP_SPAWN_LIMIT:
-		push_warning("[PickupManager] pickup spawn_limit (%d) reached; ignoring drop" % PICKUP_SPAWN_LIMIT)
+		push_warning(
+			"[PickupManager] pickup spawn_limit (%d) reached; ignoring drop" % PICKUP_SPAWN_LIMIT
+		)
 		return null
 	var pickup := PICKUP_SCENE.instantiate() as ItemPickup
 	# Set replicated state before add_child so the synchronizer ships it on spawn.
