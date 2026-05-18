@@ -93,5 +93,52 @@ history for the pattern) or split into helpers.
 3. Handle the remaining renames + the `max-returns` refactor.
 4. Verify: `gdlint scripts\` reports `Success: no problems found`.
 
-A project `.gdlintrc` at the repo root would also let you pin rule config
-(line length, disabled rules) instead of relying on gdtoolkit defaults.
+## Project `.gdlintrc`
+
+By default gdlint uses gdtoolkit's built-in rule config. A `gdlintrc` (or
+`.gdlintrc`) file at the repo root pins config for everyone — gdlint searches
+the current dir and parents for it. Generate the full default to edit:
+
+```powershell
+gdlint --dump-default-config   # writes ./gdlintrc
+```
+
+Each rule maps to a value: name-rules take a regex, numeric rules an int, and
+`disable` takes a list of rule names to switch off entirely. Relevant defaults:
+
+| Rule | Default |
+|---|---|
+| `max-line-length` | `100` |
+| `max-returns` | `6` |
+| `class-variable-name` | `_?[a-z][a-z0-9]*(_[a-z0-9]+)*` (snake_case, optional leading `_`) |
+| `load-constant-name` | `(([A-Z][a-z0-9]*)+\|_?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)` (PascalCase **or** SCREAMING) |
+| `class-definitions-order` | tools, classnames, extends, docstrings, signals, enums, consts, staticvars, exports, pubvars, prvvars, onready*, others |
+
+### The `movementSM` / `actionSM` decision
+
+`class-variable-name`'s default regex rejects camelCase, so `movementSM` and
+`actionSM` fail (8 violations). To keep the design names — recommended, they
+are the vocabulary in ARCHITECTURE.md and CLAUDE.md — pick one:
+
+**Option B1 — widen the regex** (still lints every other var name):
+
+```yaml
+# gdlintrc
+class-variable-name: '_?[a-zA-Z][a-zA-Z0-9]*(_[a-z0-9]+)*'
+```
+
+**Option B2 — disable the rule** (blunter; stops checking all var names):
+
+```yaml
+# gdlintrc
+disable:
+  - class-variable-name
+```
+
+B1 is preferred — it only tolerates the camelCase suffix and keeps the rest of
+the rule live. Either way, no source files change for these 8 violations.
+
+A `gdlintrc` could also raise `max-line-length` or disable
+`class-definitions-order` if the team would rather not chase those — but the
+fixes above are mechanical, so pinning defaults and fixing the code is the
+cleaner outcome.

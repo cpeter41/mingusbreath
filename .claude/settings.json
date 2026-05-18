@@ -6,6 +6,8 @@
       "mcp__godot__get_debug_output",
       "mcp__godot__list_projects",
       "mcp__godot__get_uid",
+      "mcp__godot__run_project",
+      "mcp__godot__stop_project",
       "Bash(gdlint *)",
       "Bash(gdformat --check *)",
       "Bash(gdformat --diff *)"
