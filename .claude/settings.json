@@ -10,7 +10,9 @@
       "mcp__godot__stop_project",
       "Bash(gdlint *)",
       "Bash(gdformat --check *)",
-      "Bash(gdformat --diff *)"
+      "Bash(gdformat --diff *)",
+      "Bash(powershell* run_tests.ps1*)",
+      "Bash(powershell* install_gdunit4.ps1*)"
     ]
   }
 }

@@ -38,7 +38,7 @@ tested in `tests/unit/world/`.
 |----------------|----------|
 | `unit/`        | Pure logic, no scene tree. Fast. |
 | `integration/` | Scene tree + autoload tests. |
-| `multiplayer/` | Two-peer host/client harness (planned). |
+| `multiplayer/` | Host/client tests — smoke test only; two-peer harness planned. Excluded from the default run; use `run_tests.ps1 multiplayer`. |
 | `helpers/`     | Shared test code — not scanned as test suites. |
 | `fixtures/`    | Test `.tres` data and `golden/` JSON snapshots. |
 
@@ -79,3 +79,6 @@ Other helpers:
   any script that references an autoload or a not-yet-cached `class_name` —
   it parse-checks files in isolation. Trust the GdUnit4 run, not that hook,
   for test files.
+- `auto_free()` / `auto_queue_free()` return `Variant`. Assigning with `:=`
+  trips the "inferred as Variant" warning (errors under the project's strict
+  settings). Use an explicit type: `var n: Node = auto_free(Node.new())`.

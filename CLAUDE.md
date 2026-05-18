@@ -27,7 +27,7 @@ The project uses **GdUnit4** (v6.1.3, pinned). Tests live under `tests/`, whose 
 - **After any code change, agents run the test suite** and confirm a clean pass before reporting done.
 - Test classes extend `GdUnitTestSuite`; the project base `GameTest` adds determinism + golden-snapshot helpers.
 
-Suite is built in phases — see `docs/planning/tests/TESTING_PLAN.md`. Phases 0–2 are done (28 unit tests); integration and multiplayer phases are pending.
+Suite is built in phases — see `docs/planning/tests/TESTING_PLAN.md` (and `TEST_EXPANSION_PLAN.md` for the next wave). Phases 0–5 are done: 53 tests across `unit/` + `integration/`, plus a multiplayer smoke test under `multiplayer/` (excluded from the default run; the two-peer harness is still scaffold).
 
 ## Architecture
 
