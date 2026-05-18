@@ -1,24 +1,20 @@
 class_name WorldRoot
 extends Node3D
 
-const AUTOSAVE_INTERVAL := 60.0
-
-var _autosave_timer: float = 0.0
+var _local_player: Node3D = null
+var _initialized_local: bool = false
 
 
 func _ready() -> void:
-	# Strict order — do not reorder.+
-	SaveSystem.load_or_init()
+	# Host loads world-state saveables FIRST — GameState.world_seed must be
+	# restored before compute_placements() runs, or islands generate from the
+	# default seed and land in the wrong spots.
+	if multiplayer.is_server():
+		SaveSystem.load_or_init()
+
 	IslandRegistry.compute_placements()
-
 	var container := $IslandContainer as Node3D
-	var player    := $Player as Node3D
-
 	WorldStream.set_container(container)
-	WorldStream.set_player(player)   # triggers first-batch load + world_loaded emit
-
-	($OceanFollower as OceanFollower).set_target(player)
-
 	TimeOfDay.set_sun($Sun as DirectionalLight3D)
 	TimeOfDay.set_world_environment(($WorldEnv as WorldEnvironment).environment)
 
@@ -26,15 +22,74 @@ func _ready() -> void:
 	hud.name = "PlayerHUD"
 	add_child(hud)
 
-func _process(delta: float) -> void:
-	if not ($Player as Node3D).get("_world_ready"):
+	# Listen for player spawns; the spawner adds them under Players.
+	($Players as Node).child_entered_tree.connect(_on_player_added)
+
+	# Autosave at daybreak instead of on a fixed timer.
+	EventBus.time_phase_changed.connect(_on_time_phase_changed)
+
+	# Tell NetworkManager we're ready so the server can spawn players into us.
+	# For a guest this also signals the host (once connected) to spawn its player.
+	NetworkManager.register_world_root(self)
+
+
+func _on_player_added(p: Node) -> void:
+	# MultiplayerSynchronizer's authority is set on add_child; wait one frame
+	# so all child-added _ready callbacks have run before we check ownership.
+	await get_tree().process_frame
+	if not is_instance_valid(p):
 		return
-	_autosave_timer += delta
-	if _autosave_timer >= AUTOSAVE_INTERVAL:
-		_autosave_timer = 0.0
-		SaveSystem.save()
+	if p.get_multiplayer_authority() != multiplayer.get_unique_id():
+		return  # not our local player
+	if _initialized_local:
+		return
+	_initialized_local = true
+	_local_player = p as Node3D
+
+	# Load this peer's profile (skills, inventory, player loadout/position)
+	# before world_loaded fires, so the starter-loadout grant sees restored
+	# items and the player applies its saved spawn position.
+	ProfileSave.load_or_init()
+
+	WorldStream.set_player(_local_player)  # emits world_loaded after first batch
+	($OceanFollower as OceanFollower).set_target(_local_player)
+
+
+## Autosave whenever dawn breaks. Fires on every peer; gating below keeps the
+## world save host-only while every peer still saves its own profile.
+func _on_time_phase_changed(phase: int) -> void:
+	if phase != TimeOfDay.Phase.DAWN:
+		return
+	if _local_player == null or not _local_player.get("_world_ready"):
+		return
+	ProfileSave.save()            # every peer autosaves its own profile
+	if multiplayer.is_server():
+		NetworkManager.record_all_player_positions()
+		SaveSystem.save()         # host also autosaves the world
 
 
 func _exit_tree() -> void:
-	GameState.last_played_at = int(Time.get_unix_time_from_system())
-	SaveSystem.save()
+	if not _initialized_local:
+		NetworkManager._world_root = null
+		return
+	ProfileSave.save()            # every peer saves its own profile
+	# Save & Quit disconnects before this deferred _exit_tree runs, leaving a
+	# null peer; guard so is_server() doesn't error. The world was already
+	# saved by PauseMenu._do_save() in that path.
+	if multiplayer.multiplayer_peer != null and multiplayer.is_server():
+		# Host never fires _on_peer_disconnected for their own peer, so record
+		# their position explicitly before any node teardown can invalidate it.
+		# Skip if the player already left the tree (scene-change teardown frees
+		# children first) — its transform is unreadable. Save & Quit already
+		# recorded it via PauseMenu._do_save() while the world was live.
+		if _local_player != null and is_instance_valid(_local_player) \
+				and _local_player.is_inside_tree():
+			PlayerStore.record(
+				NetworkManager.get_stable_id(multiplayer.get_unique_id()),
+				_local_player.global_position,
+				_local_player.rotation.y
+			)
+		NetworkManager.record_all_player_positions()
+		GameState.last_played_at = int(Time.get_unix_time_from_system())
+		SaveSystem.save()
+	NetworkManager._world_root = null

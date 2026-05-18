@@ -27,6 +27,8 @@ const THROTTLE_DOWN  := &"throttle_down"
 const RUDDER_LEFT    := &"rudder_left"
 const RUDDER_RIGHT   := &"rudder_right"
 const FIRE_CANNON    := &"fire_cannon"
+const CHAT_OPEN       := &"chat_open"
+const CHAT_OPEN_SLASH := &"chat_open_slash"
 
 # ── Discrete-event signals ───────────────────────────────────────
 signal pause_pressed
@@ -36,6 +38,8 @@ signal interact_pressed
 signal inventory_toggled
 signal map_toggled
 signal mouse_look(delta: Vector2)
+signal chat_open_pressed
+signal chat_slash_pressed
 
 # ── Input gate ───────────────────────────────────────────────────
 ## When true, gameplay actions are suppressed (queries return neutral,
@@ -78,6 +82,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(INVENTORY):
 		inventory_toggled.emit()
 		return
+	if event.is_action_pressed(CHAT_OPEN):
+		chat_open_pressed.emit()
+		return
+	if event.is_action_pressed(CHAT_OPEN_SLASH):
+		chat_slash_pressed.emit()
+		return
 	if event is InputEventMouseMotion and is_mouse_captured():
 		mouse_look.emit((event as InputEventMouseMotion).relative)
 
@@ -109,6 +119,11 @@ func attack_light_held() -> bool:
 
 func time_accel_held() -> bool:
 	if input_blocked:
+		return false
+	# Debug-only feature: host (or solo) + F2 debug overlay on.
+	if not multiplayer.is_server():
+		return false
+	if not ZoneMap.debug_visible:
 		return false
 	return Input.is_action_pressed(TIME_ACCEL)
 

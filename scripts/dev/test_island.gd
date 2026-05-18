@@ -57,7 +57,7 @@ func _add_water() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.09, 0.28, 0.72)
 	water.material_override = mat
-	water.position.y = OceanFollower.WATER_Y
+	water.position.y = Ocean.WATER_BASE_Y
 	add_child(water)
 
 
@@ -126,8 +126,7 @@ func _spawn_hud() -> void:
 func _spawn_boat() -> void:
 	var boat := BoatScene.instantiate() as Boat
 	boat.name = "Boat"
-	boat.water_y = OceanFollower.WATER_Y
-	boat.position = Vector3(62.0, OceanFollower.WATER_Y, 0.0)
+	boat.position = Vector3(62.0, Ocean.WATER_BASE_Y, 0.0)
 	add_child(boat)
 
 

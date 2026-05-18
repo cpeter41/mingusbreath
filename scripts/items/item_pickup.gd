@@ -56,6 +56,10 @@ func spring(origin: Vector3) -> void:
 
 
 func _process(delta: float) -> void:
+	# Server-authoritative: the host runs the chase + collect; clients just
+	# display the replicated position.
+	if not multiplayer.is_server():
+		return
 	if _target == null:
 		return
 	if not is_instance_valid(_target):
@@ -66,13 +70,19 @@ func _process(delta: float) -> void:
 	var dir := (destination - global_position).normalized()
 	global_position += dir * _chase_speed * delta
 	if global_position.distance_to(destination) < 0.2:
-		_target.take_pickup(item_id, count)
+		# Award the item on the target player's authority.
+		if multiplayer.multiplayer_peer == null:
+			_target.take_pickup(item_id, count)
+		else:
+			_target.take_pickup.rpc_id(_target.get_multiplayer_authority(), item_id, count)
 		if _source_runtime_id != &"":
 			WorldStream.get_delta_store().remove_delta_match(_source_runtime_id, &"dropped_item", _source_payload)
 		queue_free()
 
 
 func _on_body_entered(body: Node) -> void:
+	if not multiplayer.is_server():
+		return
 	if body.has_method("take_pickup") and _target == null:
 		set_deferred("monitoring", false)
 		_target = body

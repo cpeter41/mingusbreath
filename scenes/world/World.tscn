@@ -129,7 +129,32 @@ script = ExtResource("6_moon")
 [node name="WorldEnv" type="WorldEnvironment" parent="." unique_id=2115614150]
 environment = SubResource("Env_1")
 
-[node name="Player" parent="." unique_id=863874365 instance=ExtResource("3_pl")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 0)
+[node name="Players" type="Node3D" parent="."]
+
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/player/Player.tscn")
+spawn_path = NodePath("../Players")
+spawn_limit = 4
+
+[node name="Boats" type="Node3D" parent="."]
+
+[node name="BoatSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/ships/Boat.tscn")
+spawn_path = NodePath("../Boats")
+spawn_limit = 8
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="EnemySpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/enemies/Husk.tscn")
+spawn_path = NodePath("../Enemies")
+spawn_limit = 32
+
+[node name="Pickups" type="Node3D" parent="."]
+
+[node name="PickupSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/items/ItemPickup.tscn")
+spawn_path = NodePath("../Pickups")
+spawn_limit = 64
 
 [node name="ZoneDebug" parent="." instance=ExtResource("9_zd")]

@@ -68,21 +68,45 @@ func _process(_dt: float) -> void:
 	_update_tiers_and_biome()
 
 
-# Walks placements once, doing tier load/unload and biome enclosure in one pass.
+# Collects the world positions of every player node (local + remote ghosts).
+# Tier loading uses all of them so an island stays streamed in for any nearby
+# player, not only this peer's local one.
+func _all_player_positions() -> Array:
+	var out: Array = []
+	var scene := get_tree().current_scene
+	if scene == null:
+		return out
+	var players := scene.get_node_or_null("Players")
+	if players == null:
+		return out
+	for c in players.get_children():
+		if c is Node3D:
+			out.append((c as Node3D).global_position)
+	return out
+
+
+# Walks placements once. Tier load/unload uses the minimum distance to ANY
+# player; biome enclosure is per-peer and uses only the local player.
 func _update_tiers_and_biome() -> void:
-	var ppos: Vector3 = _player.global_position
+	var positions := _all_player_positions()
+	var local_pos: Vector3 = _player.global_position
 	var enclosing_biome: BiomeDef = null
 	for p in IslandRegistry.placements:
 		var placement := p as IslandPlacement
-		var dist: float = ppos.distance_to(placement.position)
 		var fp: float = placement.def.footprint_radius
 
-		if enclosing_biome == null and dist <= fp:
+		# Biome: local player only.
+		if enclosing_biome == null and local_pos.distance_to(placement.position) <= fp:
 			enclosing_biome = placement.def.biome
 
 		var state: Dictionary = active_islands.get(placement.runtime_id, {})
 		if state.is_empty():
 			continue
+
+		# Tier distance: nearest of any player.
+		var dist := INF
+		for pos in positions:
+			dist = minf(dist, (pos as Vector3).distance_to(placement.position))
 
 		# Mid tier
 		var mid: Node3D = state.get("mid")
@@ -158,7 +182,7 @@ func _apply_near_deltas(near_root: Node3D, placement: IslandPlacement, deltas: D
 	for payload in dropped:
 		if typeof(payload) != TYPE_DICTIONARY:
 			continue
-		var pickup := ItemPickup.new()
+		var pickup := load("res://scenes/items/ItemPickup.tscn").instantiate() as ItemPickup
 		pickup.item_id = StringName(payload.get("item_id", &""))
 		pickup.count = int(payload.get("count", 1))
 		pickup._source_runtime_id = placement.runtime_id
