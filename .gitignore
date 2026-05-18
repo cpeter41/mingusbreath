@@ -20,6 +20,9 @@ desktop.ini
 .vscode/
 .idea/
 
+# Claude Code — local per-user config
+.claude/settings.local.json
+
 
 NVIDIA Corporation
 
