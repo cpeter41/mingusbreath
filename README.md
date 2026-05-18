@@ -56,7 +56,7 @@ scripts/        GDScript logic (player, combat, ai, ships, world, crafting, inve
 scenes/         .tscn files mirroring scripts/ layout (+ scenes/ui/LobbyMenu.tscn)
 shaders/        Water, foliage wind, toon, sky, world-border
 assets/         Models, textures, sfx, music
-tests/          GUT tests (save + gen systems)
+tests/          GdUnit4 tests (unit + integration; mirrors scripts/ layout)
 docs/planning/  Architecture doc, phase plans, multiplayer retrofit plan
 ```
 

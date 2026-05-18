@@ -8,7 +8,7 @@ Mingusbreath — a 1–4 player co-op 3D open-world game in Godot 4.6 (Forward+ 
 
 ## Running & Building
 
-There is no build/lint/CLI test step — this is a Godot project edited and run through the editor.
+There is no build step — this is a Godot project edited and run through the editor. Lint runs via `gdlint`; tests run headless via GdUnit4 (see **Tests** below).
 
 - **Run**: open `project.godot` in Godot 4.6 stable, press F5. Main scene is `scenes/ui/LobbyMenu.tscn`.
 - **Steam multiplayer**: opt-in via the `--steam` launch flag (requires a running Steam client + the GodotSteam GDExtension under `addons/godotsteam/`). Without the flag, Steam init is skipped entirely.
@@ -18,7 +18,15 @@ There is no build/lint/CLI test step — this is a Godot project edited and run 
 
 ## Tests
 
-`tests/` is intended for GUT tests (save + generation systems) but is currently empty (`.gdkeep` only). No test runner is wired up yet.
+The project uses **GdUnit4** (`addons/gdUnit4/`, vendored + version-pinned). Tests live under `tests/`, whose subdirs mirror `scripts/` — a change to `scripts/world/island_placement.gd` is tested in `tests/unit/world/`.
+
+- **Run all tests**: `pwsh tests/run_tests.ps1` (POSIX mirror: `tests/run_tests.sh`). Runs GdUnit4 headless, propagates a pass/fail exit code, writes JUnit XML to `tests/.results/`.
+- **Run a subset**: pass a dir or file — `pwsh tests/run_tests.ps1 unit/world`.
+- **Layout**: `tests/unit/` (pure logic, no scene tree), `tests/integration/` (scene tree + autoloads), `tests/multiplayer/` (two-peer harness), `tests/helpers/` (shared `GameTest` base, fake-node factory, autoload reset), `tests/fixtures/` (test `.tres` + golden snapshots).
+- **After any code change, agents run the test suite** and confirm a clean pass before reporting done.
+- Test classes extend `GdUnitTestSuite`; the project base `GameTest` adds determinism + golden-snapshot helpers.
+
+Suite is built in phases — see `docs/planning/` for the testing plan. Until Phase 0 lands, `tests/` holds only `.gdkeep`.
 
 ## Architecture
 
