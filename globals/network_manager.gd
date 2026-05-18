@@ -19,6 +19,7 @@ const ENET_PORT := 7777
 const ENET_MAX_CLIENTS := 4
 const WORLD_SCENE_PATH := "res://scenes/world/World.tscn"
 const PLAYER_SCENE_PATH := "res://scenes/player/Player.tscn"
+const LOBBY_SCENE_PATH := "res://scenes/ui/LobbyMenu.tscn"
 const HUSK_SCENE := "res://scenes/enemies/Husk.tscn"
 
 var mode: int = Mode.OFFLINE
@@ -30,10 +31,22 @@ var _enet_host_ip: String = "127.0.0.1"
 var _world_loaded: bool = false
 var _world_root: Node = null  # set by WorldRoot._ready after scene swap
 
+# Join-handshake state (guest side).
+var _peer_connected: bool = false        # true once connected_to_server fires
+var _world_built_pending: bool = false   # World built, _guest_world_ready not yet sent
+
 
 func _ready() -> void:
 	print("[NetworkManager] ready (mode=OFFLINE)")
 	_parse_cmdline()
+	# Auth handshake: gates peer_connected (and thus all scene replication) until
+	# a mid-session joiner has built its World tree. Without this, the host's
+	# MultiplayerSpawners replicate existing content before the guest's World
+	# exists, permanently poisoning the spawner path cache. See _auth_callback.
+	multiplayer.auth_callback = _auth_callback
+	multiplayer.auth_timeout = 20.0
+	multiplayer.peer_authenticating.connect(_on_peer_authenticating)
+	multiplayer.peer_authentication_failed.connect(_on_peer_authentication_failed)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
@@ -122,10 +135,68 @@ func start_client(host_addr: Variant) -> void:
 func disconnect_all() -> void:
 	if multiplayer.multiplayer_peer:
 		multiplayer.multiplayer_peer.close()
-	multiplayer.multiplayer_peer = null
+	# Restore the offline peer (Godot's SceneTree default) rather than leaving it
+	# null. A null peer makes multiplayer.is_server()/get_unique_id() push an
+	# error on every call, which breaks solo play on the next world load.
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	mode = Mode.OFFLINE
 	peers.clear()
+	_peer_connected = false
+	_world_built_pending = false
+	_world_loaded = false
 	print("[NetworkManager] disconnected, back to OFFLINE")
+
+
+## Tears down the current session and returns to a fresh lobby. Used by the
+## pause menu's Save & Quit and by guests when the host's server peer closes.
+func return_to_lobby() -> void:
+	get_tree().paused = false
+	Controls.input_blocked = false
+	Controls.release_mouse()
+	disconnect_all()
+	get_tree().change_scene_to_file(LOBBY_SCENE_PATH)
+
+
+# ── Join handshake (auth phase) ──────────────────────────────────
+## Fires on both ends the instant the transport connects, before peer_connected.
+## The host tells the joining guest whether a world is already running; the
+## guest acts on that in _auth_callback.
+func _on_peer_authenticating(peer_id: int) -> void:
+	if multiplayer.is_server():
+		multiplayer.send_auth(peer_id, PackedByteArray([1 if _world_loaded else 0]))
+		# Host needs nothing from the guest — accept immediately. The connection
+		# still won't complete until the guest also completes (after it has its
+		# World built), which is the barrier we want.
+		multiplayer.complete_auth(peer_id)
+	# Guest: wait for the host's payload in _auth_callback.
+
+
+## Receives the peer's auth payload. On the guest, the host's payload says
+## whether to build the World now (mid-session join) so the guest's spawners
+## exist before any replication arrives.
+func _auth_callback(peer_id: int, data: PackedByteArray) -> void:
+	if multiplayer.is_server():
+		return  # guests send no payload; host already completed
+	var host_in_world := data.size() > 0 and data[0] == 1
+	if host_in_world and not (get_tree().current_scene is WorldRoot):
+		_world_loaded = true
+		world_loaded.emit()
+		_change_to_world_scene()  # builds the World tree synchronously
+	multiplayer.complete_auth(peer_id)
+
+
+func _on_peer_authentication_failed(peer_id: int) -> void:
+	push_warning("[NetworkManager] peer authentication failed: %d" % peer_id)
+
+
+## Guest-side: signal the host our World tree is built. Gated so the RPC only
+## fires once the peer connection is actually complete — for a mid-session join
+## the World is built during the auth phase, before connected_to_server.
+func _notify_guest_world_ready() -> void:
+	if _peer_connected:
+		_guest_world_ready.rpc_id(1)
+	else:
+		_world_built_pending = true
 
 
 func _start_host_enet() -> void:
@@ -217,7 +288,13 @@ func get_stable_id(peer_id: int) -> String:
 ## Guest tells the host which character slot it is using, so the host can key
 ## that player's saved position by a stable name.
 func _on_connected_to_server() -> void:
+	_peer_connected = true
 	_register_character.rpc_id(1, ProfileSave.current_character)
+	# A mid-session joiner built its World during the auth phase, before this
+	# fired — so the _guest_world_ready RPC was deferred. Send it now.
+	if _world_built_pending:
+		_world_built_pending = false
+		_guest_world_ready.rpc_id(1)
 
 
 @rpc("any_peer", "reliable")
@@ -261,6 +338,11 @@ func record_all_player_positions() -> void:
 	if players == null:
 		return
 	for child in players.get_children():
+		# During a scene-change teardown the player nodes leave the tree before
+		# WorldRoot._exit_tree runs — their transforms are then unreadable. Skip
+		# them; Save & Quit already recorded positions via _do_save() in-world.
+		if not (child is Node3D) or not child.is_inside_tree():
+			continue
 		var parts := String(child.name).split("_")
 		if parts.size() == 2 and parts[0] == "Player":
 			var pid := int(parts[1])
@@ -269,7 +351,12 @@ func record_all_player_positions() -> void:
 
 func _on_server_disconnected() -> void:
 	push_warning("[NetworkManager] server disconnected")
-	disconnect_all()
+	# In a world (host quit / lost) — kick this guest back to its own lobby.
+	# Still in the lobby (host left pre-start) — just drop the connection.
+	if get_tree().current_scene is WorldRoot:
+		return_to_lobby()
+	else:
+		disconnect_all()
 
 
 func _on_connection_failed() -> void:
@@ -291,6 +378,10 @@ func load_world() -> void:
 
 @rpc("authority", "reliable", "call_remote")
 func _remote_load_world() -> void:
+	# A mid-session joiner already built its World during the auth handshake.
+	if get_tree().current_scene is WorldRoot:
+		_world_loaded = true
+		return
 	_world_loaded = true
 	world_loaded.emit()
 	_change_to_world_scene()
@@ -404,8 +495,20 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		debug_spawn_enemies()
 
 
+## Swaps to the World scene synchronously. change_scene_to_file() defers the
+## swap to end-of-frame; for a guest joining mid-session that loses a race —
+## the host's MultiplayerSpawner replication packets arrive in the same poll
+## and fail to resolve paths (WorldRoot/PlayerSpawner) because the World tree
+## isn't built yet, permanently poisoning that spawner's path cache. Building
+## the tree inline guarantees it exists before the next packet is processed.
 func _change_to_world_scene() -> void:
-	get_tree().change_scene_to_file(WORLD_SCENE_PATH)
+	var tree := get_tree()
+	var world: Node = (load(WORLD_SCENE_PATH) as PackedScene).instantiate()
+	var prev := tree.current_scene
+	tree.root.add_child(world)
+	tree.current_scene = world
+	if prev != null:
+		prev.queue_free()
 	print("[NetworkManager] changed scene to %s" % WORLD_SCENE_PATH)
 
 
@@ -415,6 +518,9 @@ func _change_to_world_scene() -> void:
 func register_world_root(wr: Node) -> void:
 	_world_root = wr
 	if not multiplayer.is_server():
+		# Guest: tell the host our World tree is built so it spawns our player.
+		# Gated on the peer connection being complete (see _notify_guest_world_ready).
+		_notify_guest_world_ready()
 		return
 	# Brief defer so any guests still completing their scene change have their
 	# MultiplayerSpawner ready to receive replicated spawns.

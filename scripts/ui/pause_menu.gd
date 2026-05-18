@@ -92,8 +92,10 @@ func _on_save() -> void:
 
 
 func _on_save_quit() -> void:
+	# Save while the world is still live (multiplayer peer + player nodes intact),
+	# then tear down to a fresh lobby.
 	_do_save()
-	get_tree().quit()
+	NetworkManager.return_to_lobby()
 
 
 ## Every peer saves its own profile; only the host writes the world save.

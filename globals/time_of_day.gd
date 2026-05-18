@@ -41,7 +41,9 @@ func set_world_environment(env: Environment) -> void:
 
 
 func _process(delta: float) -> void:
-	if multiplayer.is_server():
+	# No peer == solo/offline == host-authoritative. Calling is_server() with a
+	# null peer pushes an error every frame, so short-circuit it.
+	if multiplayer.multiplayer_peer == null or multiplayer.is_server():
 		# Host decides the rate from local T input each frame.
 		var accelerating := Controls.time_accel_held()
 		current_rate = minutes_per_real_second * (TIME_ACCEL_MULT if accelerating else 1.0)

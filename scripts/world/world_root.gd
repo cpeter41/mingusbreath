@@ -29,11 +29,8 @@ func _ready() -> void:
 	EventBus.time_phase_changed.connect(_on_time_phase_changed)
 
 	# Tell NetworkManager we're ready so the server can spawn players into us.
+	# For a guest this also signals the host (once connected) to spawn its player.
 	NetworkManager.register_world_root(self)
-	# Guest handshake: signal host that this scene tree is fully built so the host
-	# spawns the Player only after MultiplayerSpawner is ready to receive it.
-	if not multiplayer.is_server() and multiplayer.multiplayer_peer != null:
-		NetworkManager._guest_world_ready.rpc_id(1)
 
 
 func _on_player_added(p: Node) -> void:
@@ -76,10 +73,17 @@ func _exit_tree() -> void:
 		NetworkManager._world_root = null
 		return
 	ProfileSave.save()            # every peer saves its own profile
-	if multiplayer.is_server():
+	# Save & Quit disconnects before this deferred _exit_tree runs, leaving a
+	# null peer; guard so is_server() doesn't error. The world was already
+	# saved by PauseMenu._do_save() in that path.
+	if multiplayer.multiplayer_peer != null and multiplayer.is_server():
 		# Host never fires _on_peer_disconnected for their own peer, so record
 		# their position explicitly before any node teardown can invalidate it.
-		if _local_player != null and is_instance_valid(_local_player):
+		# Skip if the player already left the tree (scene-change teardown frees
+		# children first) — its transform is unreadable. Save & Quit already
+		# recorded it via PauseMenu._do_save() while the world was live.
+		if _local_player != null and is_instance_valid(_local_player) \
+				and _local_player.is_inside_tree():
 			PlayerStore.record(
 				NetworkManager.get_stable_id(multiplayer.get_unique_id()),
 				_local_player.global_position,
