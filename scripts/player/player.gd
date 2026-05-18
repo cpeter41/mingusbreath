@@ -65,11 +65,13 @@ var _saved_col_mask: int = 0
 @onready var hurtbox: Area3D       = $Hurtbox
 
 
-func _ready() -> void:
-	# Authority is encoded in the node name "Player_<peer_id>" by NetworkManager.
-	# Each peer derives the same authority locally — MultiplayerSpawner does NOT
-	# replicate set_multiplayer_authority calls, so name parsing is the canonical
-	# place to set it.
+## Authority is encoded in the node name "Player_<peer_id>" by NetworkManager.
+## Each peer derives the same authority locally — MultiplayerSpawner does NOT
+## replicate set_multiplayer_authority calls, so name parsing is the canonical
+## place to set it. MUST run in _enter_tree (not _ready): changing a
+## MultiplayerSynchronizer's authority in _ready races the pending spawn and
+## triggers "unable to process the pending spawn since it has no network ID".
+func _enter_tree() -> void:
 	var parts := name.split("_")
 	if parts.size() == 2 and parts[0] == "Player":
 		var peer_id := int(parts[1])
@@ -78,6 +80,8 @@ func _ready() -> void:
 		assert(peer_id > 0, "Player name has invalid peer_id: " + name)
 		set_multiplayer_authority(peer_id, true)
 
+
+func _ready() -> void:
 	hp = max_hp
 	stamina = max_stamina
 	inventory.changed.connect(_on_inventory_changed)
