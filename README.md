@@ -10,11 +10,42 @@
 - **Save**: Binary via `FileAccess` + `var_to_bytes`, atomic write (write-temp → rename), version-tagged header
 - **Multiplayer**: Host-authoritative listen server. Owner-auth movement, RPC-routed damage, replicated HP / loadout / time-of-day. Transports: GodotSteam GDExtension (Steam friends-only lobbies, P2P relay) or ENet (localhost for two-instance dev).
 
-## Setup
+## Installation
 
-1. Open `project.godot` in `Godot_v4.6.2-stable_win64.exe`. Press F5.
-2. **For Steam multiplayer**: download GodotSteam GDExtension from `godotsteam.com`, drop into `addons/godotsteam/`, place a `steam_appid.txt` containing `480` (Spacewar test app) next to `project.godot`. Steam client must be running. `addons/` is gitignored — install per-machine.
-3. **For local two-instance dev test (no Steam needed)**: launch two Godot processes with `--offline --host` and `--offline --join 127.0.0.1`.
+### Prerequisites
+
+- **Godot 4.6 stable** — the project targets Godot `4.6` with the Forward+
+  renderer (`config/features` in `project.godot`). Download the matching
+  build (e.g. `Godot_v4.6.2-stable_win64.exe`) from
+  [godotengine.org](https://godotengine.org). Other 4.x versions are not
+  supported.
+- **GodotSteam GDExtension** — required for Steam multiplayer (friends-only
+  lobbies, P2P relay). Solo play and ENet/LAN multiplayer work *without* it.
+  Download the GDExtension from [godotsteam.com](https://godotsteam.com).
+- **Steam client** — must be running for Steam multiplayer only.
+
+### Steps
+
+1. Install Godot 4.6 stable (see Prerequisites).
+2. Clone this repository.
+3. Install GodotSteam:
+   - Download the GodotSteam GDExtension build for Godot 4.6.
+   - Add `godotsteam` to an `addons` folder next to `project.godot` in the directory.
+   - ~~Place a `steam_appid.txt` containing `480` (the Spacewar test app id)
+     next to `project.godot`.~~
+4. Open `project.godot` in Godot 4.6 and press F5 to run.
+
+### Running
+
+- **Solo / multiplayer via the lobby** — F5 launches `LobbyMenu`. Pick a world
+  and character, then Solo, Host, or Join.
+- **Steam multiplayer** — Steam init is opt-in: launch with the `--steam`
+  command-line flag (and a running Steam client). Without it, Steam is skipped
+  so the client never shows "Now Playing".
+- **Local two-instance dev test (no Steam, no GodotSteam needed)** — launch two
+  Godot processes with `--offline --host` and `--offline --join 127.0.0.1`.
+- **LAN play** — host runs `--offline --host`; other machines run
+  `--offline --join <host-LAN-IP>`. The host must allow inbound UDP port 7777.
 
 ## Project Structure
 
