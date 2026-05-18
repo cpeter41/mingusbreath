@@ -67,7 +67,7 @@ func _on_hitbox_entered(area: Area3D) -> void:
 		return
 	_hit_this_strike = true
 	var amount := CombatResolver.resolve(enemy, target, &"", enemy.def.damage)
-	EventBus.damage_dealt.emit(enemy, target, &"", &"", amount)
+	NetworkManager.broadcast_damage(enemy, target, &"", &"", amount)
 	target.take_damage(amount, enemy)
 
 
@@ -88,15 +88,7 @@ func _face_player() -> void:
 		enemy.look_at(flat_target, Vector3.UP)
 
 
+## Sets the replicated `telegraphing` flag; enemy.gd's setter applies the red
+## tint on every peer.
 func _set_telegraph_visual(on: bool) -> void:
-	if enemy.mesh == null:
-		return
-	if on:
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(1.0, 0.2, 0.2)
-		mat.emission_enabled = true
-		mat.emission = Color(1.0, 0.0, 0.0)
-		mat.emission_energy_multiplier = 1.5
-		enemy.mesh.material_override = mat
-	else:
-		enemy.mesh.material_override = null
+	enemy.telegraphing = on

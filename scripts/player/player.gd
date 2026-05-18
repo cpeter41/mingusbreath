@@ -93,7 +93,6 @@ func _ready() -> void:
 
 	add_to_group("player")
 	Controls.capture_mouse()
-	Controls.pause_pressed.connect(_on_pause_pressed)
 	Controls.reset_pressed.connect(_on_reset_pressed)
 	Controls.spawn_boat_pressed.connect(_on_spawn_boat_pressed)
 	Controls.interact_pressed.connect(_on_interact_pressed)
@@ -136,7 +135,12 @@ func _update_shield_visual() -> void:
 		existing.queue_free()
 
 
+## Awards an item to this player. Runs on the owning peer's authority — the
+## server (which owns pickups) calls this via rpc_id so it can credit any player.
+@rpc("any_peer", "reliable", "call_local")
 func take_pickup(item_id: StringName, count: int) -> void:
+	if not is_multiplayer_authority():
+		return
 	inventory.add(item_id, count)
 	EventBus.item_picked_up.emit(item_id, count)
 
@@ -151,7 +155,8 @@ func take_damage(amount: float, source = null) -> void:
 		rpc_id(get_multiplayer_authority(), "take_damage_rpc", amount, src_path)
 		return
 	if is_parrying:
-		EventBus.player_parried.emit(source)
+		# Networked so the attacking enemy (server) hears a guest's parry.
+		NetworkManager.broadcast_parried(source)
 		return
 	if is_blocking:
 		var cost := amount * 0.5
@@ -199,10 +204,6 @@ func respawn() -> void:
 	stamina = max_stamina
 	_stamina_regen_timer = 999.0
 	EventBus.player_respawned.emit()
-
-
-func _on_pause_pressed() -> void:
-	Controls.toggle_mouse_capture()
 
 
 func _on_reset_pressed() -> void:

@@ -182,7 +182,7 @@ func _apply_near_deltas(near_root: Node3D, placement: IslandPlacement, deltas: D
 	for payload in dropped:
 		if typeof(payload) != TYPE_DICTIONARY:
 			continue
-		var pickup := ItemPickup.new()
+		var pickup := load("res://scenes/items/ItemPickup.tscn").instantiate() as ItemPickup
 		pickup.item_id = StringName(payload.get("item_id", &""))
 		pickup.count = int(payload.get("count", 1))
 		pickup._source_runtime_id = placement.runtime_id

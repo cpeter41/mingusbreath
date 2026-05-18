@@ -5,37 +5,35 @@ var hp: float = 50.0
 @onready var mesh: MeshInstance3D = $Mesh
 
 
+## Routes to the multiplayer authority, mirroring Enemy.take_damage.
 func take_damage(amount: float, source: Node = null) -> void:
+	if not is_multiplayer_authority():
+		var sp: NodePath = source.get_path() if source is Node else NodePath()
+		rpc_id(get_multiplayer_authority(), "take_damage_rpc", amount, sp)
+		return
 	hp -= amount
-	DamageFlash.flash(mesh)
+	if multiplayer.multiplayer_peer == null:
+		DamageFlash.flash(mesh)
+	else:
+		_flash.rpc()
 	if hp <= 0.0:
-		EventBus.enemy_killed.emit(&"target_dummy", source)
+		NetworkManager.broadcast_enemy_killed(&"target_dummy", source)
 		_drop_loot()
 		queue_free()
 
+
+@rpc("any_peer", "reliable")
+func take_damage_rpc(amount: float, source_path: NodePath) -> void:
+	if not is_multiplayer_authority():
+		return
+	take_damage(amount, get_node_or_null(source_path))
+
+
+@rpc("authority", "reliable", "call_local")
+func _flash() -> void:
+	DamageFlash.flash(mesh)
+
+
+## Server-only — reached on the authority via take_damage.
 func _drop_loot() -> void:
-	var pickup := ItemPickup.new()
-	pickup.item_id = &"scrap"
-	pickup.count = 1
-
-	var placement: IslandPlacement = WorldStream.get_placement_enclosing(global_position)
-	if placement != null:
-		var delta_root: Node3D = WorldStream.get_delta_root(placement.runtime_id)
-		if delta_root != null:
-			# Phase 5 placements use rotation_y = 0, so plain subtraction == local position.
-			var local_pos := global_position - placement.position
-			var payload := {
-				"item_id": &"scrap",
-				"count": 1,
-				"local_position": V3Codec.encode(local_pos),
-			}
-			WorldStream.get_delta_store().add_delta(placement.runtime_id, &"dropped_item", payload)
-			pickup._source_runtime_id = placement.runtime_id
-			pickup._source_payload = payload
-			delta_root.add_child(pickup)
-			pickup.spring(global_position + Vector3.UP * 0.5)
-			return
-
-	# Open ocean / no DeltaRoot — transient drop, no delta written.
-	get_parent().add_child(pickup)
-	pickup.spring(global_position + Vector3.UP * 0.5)
+	PickupManager.spawn_loot(&"scrap", 1, global_position + Vector3.UP * 0.5)

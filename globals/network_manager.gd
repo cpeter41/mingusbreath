@@ -19,6 +19,7 @@ const ENET_PORT := 7777
 const ENET_MAX_CLIENTS := 4
 const WORLD_SCENE_PATH := "res://scenes/world/World.tscn"
 const PLAYER_SCENE_PATH := "res://scenes/player/Player.tscn"
+const HUSK_SCENE := "res://scenes/enemies/Husk.tscn"
 
 var mode: int = Mode.OFFLINE
 var local_peer_id: int = 1
@@ -346,6 +347,61 @@ func broadcast_chat(sender_name: String, text: String) -> void:
 @rpc("any_peer", "reliable", "call_local")
 func _chat_event(sender_name: String, text: String) -> void:
 	EventBus.chat_message_received.emit(sender_name, text)
+
+
+## Networked enemy death. Re-emits EventBus.enemy_killed on every peer so skill
+## XP / UI hooks fire everywhere. Twin of broadcast_damage.
+func broadcast_enemy_killed(enemy_id: StringName, killer: Node) -> void:
+	var kp: NodePath = killer.get_path() if killer != null else NodePath()
+	if multiplayer.multiplayer_peer == null:
+		EventBus.enemy_killed.emit(enemy_id, killer)
+		return
+	_enemy_killed_event.rpc(enemy_id, kp)
+
+
+@rpc("any_peer", "reliable", "call_local")
+func _enemy_killed_event(enemy_id: StringName, killer_path: NodePath) -> void:
+	EventBus.enemy_killed.emit(enemy_id, get_node_or_null(killer_path))
+
+
+## Networked parry. Re-emits EventBus.player_parried on every peer so the
+## attacking enemy (which lives on the server) hears a guest's parry.
+func broadcast_parried(attacker: Node) -> void:
+	var ap: NodePath = attacker.get_path() if attacker != null else NodePath()
+	if multiplayer.multiplayer_peer == null:
+		EventBus.player_parried.emit(attacker)
+		return
+	_parried_event.rpc(ap)
+
+
+@rpc("any_peer", "reliable", "call_local")
+func _parried_event(attacker_path: NodePath) -> void:
+	EventBus.player_parried.emit(get_node_or_null(attacker_path))
+
+
+## Host-only debug enemy batch. Bound to the F key (see _unhandled_key_input).
+## Spawns Husks in a ring near the mainland via the EnemySpawner.
+func debug_spawn_enemies(count: int = 3) -> void:
+	if not multiplayer.is_server() or _world_root == null:
+		return
+	var enemies := _world_root.get_node_or_null("Enemies")
+	var mp := IslandRegistry.get_mainland_placement()
+	if enemies == null or mp == null:
+		return
+	var base := enemies.get_child_count()
+	for i in count:
+		var e: Node3D = (load(HUSK_SCENE) as PackedScene).instantiate()
+		e.name = "Husk_%d" % (base + i)
+		var ang := TAU * float(i) / float(count)
+		e.position = mp.position + Vector3(cos(ang), 20.0, sin(ang)) * 12.0
+		enemies.add_child(e, true)
+	print("[NetworkManager] debug-spawned %d husks" % count)
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo \
+			and (event as InputEventKey).keycode == KEY_F:
+		debug_spawn_enemies()
 
 
 func _change_to_world_scene() -> void:

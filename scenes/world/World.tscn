@@ -143,4 +143,18 @@ _spawnable_scenes = PackedStringArray("res://scenes/ships/Boat.tscn")
 spawn_path = NodePath("../Boats")
 spawn_limit = 8
 
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="EnemySpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/enemies/Husk.tscn")
+spawn_path = NodePath("../Enemies")
+spawn_limit = 32
+
+[node name="Pickups" type="Node3D" parent="."]
+
+[node name="PickupSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/items/ItemPickup.tscn")
+spawn_path = NodePath("../Pickups")
+spawn_limit = 64
+
 [node name="ZoneDebug" parent="." instance=ExtResource("9_zd")]
