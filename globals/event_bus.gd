@@ -20,3 +20,6 @@ signal island_unloaded(runtime_id: StringName)
 signal island_tier_loaded(runtime_id: StringName, tier: StringName, instance: Node3D)
 signal island_tier_unloaded(runtime_id: StringName, tier: StringName)
 signal biome_entered(biome: BiomeDef)
+signal chat_message_received(sender: String, text: String)
+# "/" prefix messages — emitted locally only; wired up by future command handler.
+signal chat_command_entered(text: String)

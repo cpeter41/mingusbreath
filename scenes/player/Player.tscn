@@ -29,8 +29,42 @@ height = 1.8
 radius = 0.4
 height = 1.8
 
+[sub_resource type="SceneReplicationConfig" id="SRC_player"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:hp")
+properties/2/spawn = true
+properties/2/replication_mode = 2
+properties/3/path = NodePath(".:stamina")
+properties/3/spawn = true
+properties/3/replication_mode = 2
+properties/4/path = NodePath(".:on_boat")
+properties/4/spawn = true
+properties/4/replication_mode = 2
+properties/5/path = NodePath(".:is_blocking")
+properties/5/spawn = true
+properties/5/replication_mode = 2
+properties/6/path = NodePath(".:is_parrying")
+properties/6/spawn = true
+properties/6/replication_mode = 2
+properties/7/path = NodePath(".:has_sword")
+properties/7/spawn = true
+properties/7/replication_mode = 2
+properties/8/path = NodePath(".:has_shield")
+properties/8/spawn = true
+properties/8/replication_mode = 2
+
 [node name="Player" type="CharacterBody3D" unique_id=576338234]
 script = ExtResource("1_plyr")
+
+[node name="NetSync" type="MultiplayerSynchronizer" parent="."]
+replication_interval = 0.05
+delta_interval = 0.05
+replication_config = SubResource("SRC_player")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1998205765]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
@@ -48,6 +82,7 @@ spring_length = 4.0
 script = ExtResource("2_pcam")
 
 [node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D" unique_id=1823044835]
+current = false
 
 [node name="WeaponMount" type="Node3D" parent="." unique_id=716419572]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.2, -0.5)

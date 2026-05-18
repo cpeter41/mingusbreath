@@ -24,11 +24,19 @@ func _ready() -> void:
 	var map_screen := MapScreen.new()
 	add_child(map_screen)
 
+	var pause_menu := PauseMenu.new()
+	pause_menu.name = "PauseMenu"
+	add_child(pause_menu)
+
 	_add_stat_bars()
 	_add_pickup_label()
 	_add_death_fade()
 	_add_coords_label()
 	_add_biome_label()
+
+	var chat := ChatPanel.new()
+	chat.name = "ChatPanel"
+	add_child(chat)
 
 	var legend := ControlsLegend.new()
 	legend.name = "ControlsLegend"

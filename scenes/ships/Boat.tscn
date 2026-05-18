@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://b8mng8r8b08at"]
+[gd_scene load_steps=6 format=3 uid="uid://b8mng8r8b08at"]
 
 [ext_resource type="Script" uid="uid://wt5mji5l424y" path="res://scripts/ships/boat.gd" id="1"]
 
@@ -14,9 +14,37 @@ size = Vector3(3.5, 1.4, 8)
 [sub_resource type="SphereShape3D" id="4"]
 radius = 5.5
 
+[sub_resource type="SceneReplicationConfig" id="SRC_boat"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:linear_velocity")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+properties/3/path = NodePath(".:angular_velocity")
+properties/3/spawn = true
+properties/3/replication_mode = 1
+properties/4/path = NodePath(".:throttle")
+properties/4/spawn = true
+properties/4/replication_mode = 1
+properties/5/path = NodePath(".:mounted_peers")
+properties/5/spawn = true
+properties/5/replication_mode = 2
+properties/6/path = NodePath(".:owner_peer_id")
+properties/6/spawn = true
+properties/6/replication_mode = 1
+
 [node name="Boat" type="RigidBody3D" unique_id=963905154]
 collision_mask = 9
 script = ExtResource("1")
+
+[node name="NetSync" type="MultiplayerSynchronizer" parent="."]
+replication_interval = 0.05
+delta_interval = 0.05
+replication_config = SubResource("SRC_boat")
 
 [node name="Hull" type="MeshInstance3D" parent="." unique_id=1590639390]
 material_override = SubResource("2")
@@ -26,8 +54,17 @@ mesh = SubResource("1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
 shape = SubResource("3")
 
-[node name="DeckSpawn" type="Node3D" parent="." unique_id=453125701]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+[node name="DeckSpawn0" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 2.5)
+
+[node name="DeckSpawn1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, -2.5)
+
+[node name="DeckSpawn2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.3, 0)
+
+[node name="DeckSpawn3" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.3, 0)
 
 [node name="MountZone" type="Area3D" parent="." unique_id=856230509]
 collision_layer = 0
@@ -35,11 +72,3 @@ collision_layer = 0
 [node name="MountZoneShape" type="CollisionShape3D" parent="MountZone" unique_id=47535606]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("4")
-
-[node name="CameraPivot" type="Node3D" parent="." unique_id=2081461251]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
-
-[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot" unique_id=1956256006]
-spring_length = 8.0
-
-[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D" unique_id=1391911463]

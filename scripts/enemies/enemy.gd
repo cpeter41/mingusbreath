@@ -6,6 +6,13 @@ extends CharacterBody3D
 var hp: float = 0.0
 var spawn_anchor: Vector3 = Vector3.ZERO
 
+## Replicated. The attack state sets it on the server; the setter applies the
+## red telegraph tint on every peer when the change replicates in.
+var telegraphing: bool = false:
+	set(v):
+		telegraphing = v
+		_apply_telegraph_visual(v)
+
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 @onready var movementSM: EnemyMovementSM = $EnemyMovementSM
@@ -21,6 +28,12 @@ func _ready() -> void:
 	spawn_anchor = global_position
 	attack_hitbox.monitoring = false
 	_ensure_collision_shapes()
+
+	# Server-authoritative: only the host runs AI + physics + the hitbox. Clients
+	# freeze and display the replicated transform / hp / telegraph state.
+	if not multiplayer.is_server():
+		set_physics_process(false)
+		attack_hitbox.monitoring = false
 
 
 func _ensure_collision_shapes() -> void:
@@ -51,34 +64,79 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 
+## Public damage entry. Routes to the multiplayer authority (the host, since
+## enemies spawn server-side). Mirrors Player.take_damage.
 func take_damage(amount: float, source: Node = null) -> void:
+	if not is_multiplayer_authority():
+		var sp: NodePath = source.get_path() if source is Node else NodePath()
+		rpc_id(get_multiplayer_authority(), "take_damage_rpc", amount, sp)
+		return
 	hp -= amount
-	DamageFlash.flash(mesh)
+	if multiplayer.multiplayer_peer == null:
+		DamageFlash.flash(mesh)
+	else:
+		_flash.rpc()
 	if hp <= def.flee_hp_ratio * def.max_hp and hp > 0.0:
 		movementSM.transition_to("flee")
 	if hp <= 0.0:
 		_die(source)
 
 
+@rpc("any_peer", "reliable")
+func take_damage_rpc(amount: float, source_path: NodePath) -> void:
+	if not is_multiplayer_authority():
+		return
+	take_damage(amount, get_node_or_null(source_path))
+
+
+@rpc("authority", "reliable", "call_local")
+func _flash() -> void:
+	DamageFlash.flash(mesh)
+
+
+## Server-only — reached on the authority via take_damage.
 func _die(source: Node) -> void:
-	EventBus.enemy_killed.emit(def.id, source)
+	NetworkManager.broadcast_enemy_killed(def.id, source)
 	_drop_loot()
 	queue_free()
 
 
-## Drops are transient by design — husks roam open ocean, no DeltaRoot to persist
-## into. TargetDummy writes deltas because it lives on a streamed island.
+## Server-only. Drops are transient by design — husks roam open ocean, no
+## DeltaRoot to persist into.
 func _drop_loot() -> void:
 	for item_id in def.loot_drops:
-		var pickup := ItemPickup.new()
-		pickup.item_id = item_id
-		pickup.count = 1
-		get_parent().add_child(pickup)
-		pickup.spring(global_position + Vector3.UP * 0.5)
+		PickupManager.spawn_loot(item_id, 1, global_position + Vector3.UP * 0.5)
 
 
+func _apply_telegraph_visual(on: bool) -> void:
+	if mesh == null:
+		return
+	if on:
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(1.0, 0.2, 0.2)
+		mat.emission_enabled = true
+		mat.emission = Color(1.0, 0.0, 0.0)
+		mat.emission_energy_multiplier = 1.5
+		mesh.material_override = mat
+	else:
+		mesh.material_override = null
+
+
+## Nearest of all connected players. Searches /World/Players (the MP container);
+## falls back to the "player" group for the offline dev sandbox (test_island,
+## which has no Players container).
 func get_player() -> Node3D:
-	var players := get_tree().get_nodes_in_group("player")
-	if players.is_empty():
-		return null
-	return players[0] as Node3D
+	var scene := get_tree().current_scene
+	if scene != null:
+		var players := scene.get_node_or_null("Players")
+		if players != null:
+			var best: Node3D = null
+			var best_d := INF
+			for c in players.get_children():
+				var d := global_position.distance_to((c as Node3D).global_position)
+				if d < best_d:
+					best_d = d
+					best = c
+			return best
+	var grp := get_tree().get_nodes_in_group("player")
+	return grp[0] as Node3D if not grp.is_empty() else null

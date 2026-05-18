@@ -9,7 +9,9 @@ const MAX_SLOTS := 20
 var slots: Array[Dictionary] = []
 
 func _ready() -> void:
-	SaveSystem.register(self)
+	# Registered with ProfileSave by the owning Player (owner-only) so a host
+	# machine doesn't register guest-ghost inventories. See player.gd _ready.
+	pass
 
 # Returns leftover count that didn't fit (0 = all added).
 func add(item_id: StringName, count: int) -> int:

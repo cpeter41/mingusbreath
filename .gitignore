@@ -22,3 +22,7 @@ desktop.ini
 
 
 NVIDIA Corporation
+
+# Plugins — install separately per environment. GodotSteam from godotsteam.com.
+addons/
+steam_appid.txt
