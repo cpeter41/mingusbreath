@@ -1,0 +1,66 @@
+[
+	{
+		"id": "island_mainland_01",
+		"rot": 0.0,
+		"runtime_id": "1234567::0::island_mainland_01",
+		"slot": 0,
+		"x": 2620.0,
+		"z": -2620.0
+	},
+	{
+		"id": "isle_reef",
+		"rot": 3.47,
+		"runtime_id": "1234567::1::isle_reef",
+		"slot": 1,
+		"x": 1649.062,
+		"z": 2441.884
+	},
+	{
+		"id": "isle_peak",
+		"rot": 2.585,
+		"runtime_id": "1234567::2::isle_peak",
+		"slot": 2,
+		"x": -434.545,
+		"z": -1725.202
+	},
+	{
+		"id": "isle_reef",
+		"rot": 1.576,
+		"runtime_id": "1234567::3::isle_reef",
+		"slot": 3,
+		"x": -2187.792,
+		"z": 2179.313
+	},
+	{
+		"id": "isle_reef",
+		"rot": 0.427,
+		"runtime_id": "1234567::4::isle_reef",
+		"slot": 4,
+		"x": 2530.686,
+		"z": 1391.406
+	},
+	{
+		"id": "isle_cove",
+		"rot": 0.842,
+		"runtime_id": "1234567::5::isle_cove",
+		"slot": 5,
+		"x": -1205.818,
+		"z": -2297.493
+	},
+	{
+		"id": "island_mainland_01",
+		"rot": 4.772,
+		"runtime_id": "1234567::6::island_mainland_01",
+		"slot": 6,
+		"x": -167.277,
+		"z": -2145.378
+	},
+	{
+		"id": "isle_reef",
+		"rot": 2.277,
+		"runtime_id": "1234567::7::isle_reef",
+		"slot": 7,
+		"x": -470.06,
+		"z": 1749.06
+	}
+]

@@ -5,6 +5,9 @@
 # Imported assets cache
 .import/
 
+# Test run artifacts (GdUnit4 reports)
+tests/.results/
+
 # Exports
 /build/
 /export/
@@ -27,5 +30,6 @@ desktop.ini
 NVIDIA Corporation
 
 # Plugins — install separately per environment. GodotSteam from godotsteam.com.
+# gdUnit4 (test framework) — install via tests/install_gdunit4.ps1.
 addons/
 steam_appid.txt
