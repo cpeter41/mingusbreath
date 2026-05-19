@@ -1,9 +1,9 @@
 extends EnemyActionState
 
+enum Phase { TELEGRAPH, STRIKE, COOLDOWN }
+
 const TELEGRAPH_TIME := 0.4
 const STRIKE_TIME    := 0.15
-
-enum Phase { TELEGRAPH, STRIKE, COOLDOWN }
 
 var _phase: Phase = Phase.TELEGRAPH
 var _timer: float  = 0.0
@@ -83,7 +83,9 @@ func _face_player() -> void:
 	var player := enemy.get_player()
 	if not player:
 		return
-	var flat_target := Vector3(player.global_position.x, enemy.global_position.y, player.global_position.z)
+	var flat_target := Vector3(
+		player.global_position.x, enemy.global_position.y, player.global_position.z
+	)
 	if flat_target.distance_squared_to(enemy.global_position) > 0.001:
 		enemy.look_at(flat_target, Vector3.UP)
 

@@ -14,8 +14,8 @@ func _run() -> void:
 
 
 func _bake_one(def_id: StringName, size_m: int, max_height_m: float) -> void:
-	var seed_ := hash(String(def_id))
-	var data := IslandGenerator.generate(seed_, size_m, max_height_m)
+	var island_seed := hash(String(def_id))
+	var data := IslandGenerator.generate(island_seed, size_m, max_height_m)
 	var out_dir := "res://assets/islands/"
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_dir))
 	var mesh_path  := "%s%s_mesh.tres"       % [out_dir, def_id]

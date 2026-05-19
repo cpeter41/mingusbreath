@@ -1,8 +1,6 @@
 class_name Sword
 extends Node3D
 
-@onready var hitbox: Hitbox = $Hitbox
-
 const ATTACK_DURATION := 0.8
 
 # all ratios must add to 1
@@ -17,6 +15,8 @@ const RETURN_DURATION := ATTACK_DURATION * _RETURN_RATIO
 var _rot_x_tween: Tween
 var _rot_y_tween: Tween
 var _hitframe_tween: Tween
+
+@onready var hitbox: Hitbox = $Hitbox
 
 
 ## Called by Attack state. Re-entrant: kills any in-flight swing and starts a new one.

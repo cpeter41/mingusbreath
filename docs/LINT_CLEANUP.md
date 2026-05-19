@@ -1,7 +1,16 @@
 # Lint Cleanup — `scripts/` backlog
 
-`globals/` is gdlint-clean. `scripts/` still has **50 violations**. This doc
-hands that work to a future agent.
+## Status: complete
+
+`globals/` and `scripts/` are both gdlint-clean (`Success: no problems found`).
+The 50 violations below were resolved: 40 mechanical source fixes (line wraps,
+class-definitions-order, the `_event_label` max-returns refactor, `seed_` →
+`island_seed`, unused-arg prefix) plus a root `gdlintrc` that widens
+`class-variable-name` and `load-constant-name` so the 10 idiomatic-name
+violations (`movementSM`/`actionSM`, preload consts) pass without source churn.
+The notes below are kept for reference.
+
+---
 
 ## Running the linter
 

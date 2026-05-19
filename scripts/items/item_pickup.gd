@@ -23,7 +23,8 @@ func _ready() -> void:
 	col.shape = SphereShape3D.new()
 	col.shape.radius = 0.6
 	add_child(col)
-	collision_layer = CollisionLayers.SHORE_WALL  # shares bit with shore wall — Area3D, no physical collision
+	# shares bit with shore wall — Area3D, no physical collision
+	collision_layer = CollisionLayers.SHORE_WALL
 	collision_mask = CollisionLayers.WORLD
 
 	body_entered.connect(_on_body_entered)
@@ -76,7 +77,9 @@ func _process(delta: float) -> void:
 		else:
 			_target.take_pickup.rpc_id(_target.get_multiplayer_authority(), item_id, count)
 		if _source_runtime_id != &"":
-			WorldStream.get_delta_store().remove_delta_match(_source_runtime_id, &"dropped_item", _source_payload)
+			WorldStream.get_delta_store().remove_delta_match(
+				_source_runtime_id, &"dropped_item", _source_payload
+			)
 		queue_free()
 
 

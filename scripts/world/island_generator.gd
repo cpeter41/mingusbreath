@@ -82,7 +82,9 @@ static func _build_collider(heights: PackedFloat32Array, resolution: int) -> Hei
 
 ## Builds an invisible vertical wall along the shoreline (where height crosses WALL_THRESHOLD).
 ## Boat hulls collide with this; terrain heightmap alone is too gentle to deflect them at the edge.
-static func _build_shore_wall(heights: PackedFloat32Array, resolution: int) -> ConcavePolygonShape3D:
+static func _build_shore_wall(
+	heights: PackedFloat32Array, resolution: int
+) -> ConcavePolygonShape3D:
 	const WALL_THRESHOLD := 0.3
 	const WALL_BOTTOM_Y  := -3.0
 	const WALL_TOP_Y     := 4.0
@@ -113,7 +115,8 @@ static func _build_shore_wall(heights: PackedFloat32Array, resolution: int) -> C
 	return shape
 
 
-## Appends two triangles forming a vertical quad from `a` (bottom corner) to `b` (top opposite corner).
+## Appends two triangles forming a vertical quad from `a` (bottom corner) to
+## `b` (top opposite corner).
 ## Both winding orders added so the wall is solid from either side.
 static func _emit_quad(faces: PackedVector3Array, a: Vector3, b: Vector3) -> void:
 	var p0 := a

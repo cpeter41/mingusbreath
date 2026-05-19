@@ -128,14 +128,18 @@ func _event_label(ev: InputEvent) -> String:
 			return ""
 		return OS.get_keycode_string(code)
 	if ev is InputEventMouseButton:
-		var m := ev as InputEventMouseButton
-		match m.button_index:
-			MOUSE_BUTTON_LEFT: return "LMB"
-			MOUSE_BUTTON_RIGHT: return "RMB"
-			MOUSE_BUTTON_MIDDLE: return "MMB"
-			MOUSE_BUTTON_WHEEL_UP: return "Wheel↑"
-			MOUSE_BUTTON_WHEEL_DOWN: return "Wheel↓"
-			_: return "Mouse%d" % m.button_index
+		return _mouse_button_label((ev as InputEventMouseButton).button_index)
 	if ev is InputEventJoypadButton:
 		return "Pad%d" % (ev as InputEventJoypadButton).button_index
 	return ""
+
+
+func _mouse_button_label(button_index: int) -> String:
+	var labels := {
+		MOUSE_BUTTON_LEFT: "LMB",
+		MOUSE_BUTTON_RIGHT: "RMB",
+		MOUSE_BUTTON_MIDDLE: "MMB",
+		MOUSE_BUTTON_WHEEL_UP: "Wheel↑",
+		MOUSE_BUTTON_WHEEL_DOWN: "Wheel↓",
+	}
+	return labels.get(button_index, "Mouse%d" % button_index)

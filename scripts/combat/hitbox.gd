@@ -19,7 +19,11 @@ func _on_area_entered(area: Area3D) -> void:
 	# Only the attacker's authority peer applies damage. Without this, future
 	# inventory replication would make the hitbox visible on all peers and each
 	# would call take_damage on the same hit.
-	if attacker != null and attacker.has_method("is_multiplayer_authority") and not attacker.is_multiplayer_authority():
+	if (
+		attacker != null
+		and attacker.has_method("is_multiplayer_authority")
+		and not attacker.is_multiplayer_authority()
+	):
 		return
 	# Don't self-hit (player's own hitbox touching their own hurtbox).
 	if target == attacker:

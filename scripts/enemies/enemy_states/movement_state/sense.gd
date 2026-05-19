@@ -1,7 +1,8 @@
 extends EnemyMovementState
 
-var _timer: float = 0.0
 const ALERT_TIME := 0.5
+
+var _timer: float = 0.0
 
 func enter() -> void:
 	_timer = ALERT_TIME

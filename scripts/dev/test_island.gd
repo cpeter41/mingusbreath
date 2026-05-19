@@ -40,7 +40,8 @@ func _build_island() -> void:
 
 	var shore := StaticBody3D.new()
 	shore.name = "ShoreWall"
-	shore.collision_layer = CollisionLayers.SHORE_WALL  # boat-only; player mask doesn't include this bit
+	# boat-only; player mask doesn't include this bit
+	shore.collision_layer = CollisionLayers.SHORE_WALL
 	shore.collision_mask = 0
 	var shore_col := CollisionShape3D.new()
 	shore_col.shape = data["shore_wall"]

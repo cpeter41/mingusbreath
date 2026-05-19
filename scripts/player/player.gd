@@ -9,9 +9,12 @@ const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
 const SHIELD_SCENE  := preload("res://scenes/weapons/Shield.tscn")
 const RESPAWN_FALLBACK_Y := 15.0
 const BOAT_SPAWN_DIST := 8.0
+const SPAWN_RING_RADIUS := 3.0
+const SPAWN_SLOTS := 4
 
 @export var max_hp: float      = 100.0
 @export var max_stamina: float = 150.0
+@export var speed: float       = 5.0
 
 # Replicated via MultiplayerSynchronizer. Setters re-emit EventBus signals
 # only on the owning peer so each peer's HUD reads its own local player.
@@ -41,10 +44,12 @@ var has_shield: bool = false:
 		var was := has_shield
 		has_shield = v
 		_update_shield_visual()
-		if not v and was and is_inside_tree() and is_multiplayer_authority() and is_blocking and actionSM != null:
+		if (
+			not v and was and is_inside_tree()
+			and is_multiplayer_authority() and is_blocking and actionSM != null
+		):
 			actionSM.transition_to("idle")
 
-@export var speed: float = 5.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 # Owning peer id, parsed from the node name in _enter_tree. Equals
@@ -326,10 +331,6 @@ func _on_interact_pressed() -> void:
 			nearest = boat
 	if nearest != null:
 		nearest.request_mount.rpc_id(1, my_id)
-
-
-const SPAWN_RING_RADIUS := 3.0
-const SPAWN_SLOTS := 4
 
 
 func _on_world_loaded() -> void:
