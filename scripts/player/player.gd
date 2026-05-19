@@ -29,6 +29,23 @@ var on_boat: bool      = false
 var is_blocking: bool  = false
 var is_parrying: bool  = false
 
+# Replicated movement-anim state name (owner authority). Owner's MovementSM
+# writes this on every transition; the setter fires the matching clip on every
+# peer so remote ghosts animate in lockstep with the owner. Stored as the
+# lowercase movement state name ("idle", "run", "sprint", "jump", "fall", "swim").
+const ANIM_FOR_STATE := {
+	&"idle":   &"Idle",
+	&"run":    &"Walk",
+	&"sprint": &"Run",
+	&"jump":   &"Idle",
+	&"fall":   &"Idle",
+	&"swim":   &"Idle",
+}
+var anim_state: StringName = &"idle":
+	set(v):
+		anim_state = v
+		_play_anim(v)
+
 # Replicated visual flags. Owner sets these from inventory contents; all peers
 # spawn/free the Sword/Shield mount nodes based on flag transitions. Inventory
 # contents themselves are not replicated — only the visible loadout state is.
@@ -64,9 +81,20 @@ var _saved_col_mask: int = 0
 @onready var movementSM: Node      = $MovementStateMachine
 @onready var actionSM: Node        = $ActionStateMachine
 @onready var inventory: Inventory  = $Inventory
-@onready var weapon_mount: Node3D  = $WeaponMount
-@onready var shield_mount: Node3D  = $ShieldMount
+@onready var weapon_mount: Node3D  = $Model/Monk/CharacterArmature/Skeleton3D/WeaponMount
+@onready var shield_mount: Node3D  = $Model/Monk/CharacterArmature/Skeleton3D/ShieldMount
 @onready var hurtbox: Area3D       = $Hurtbox
+# AnimationPlayer comes from the imported Monk.gltf subscene. Path is the
+# instance's auto-generated tree — update here if the import root name changes.
+@onready var anim_player: AnimationPlayer = $Model/Monk/AnimationPlayer
+
+
+func _play_anim(state: StringName) -> void:
+	if anim_player == null:
+		return
+	var clip: StringName = ANIM_FOR_STATE.get(state, &"Idle")
+	if anim_player.current_animation != String(clip):
+		anim_player.play(clip)
 
 
 ## Authority is encoded in the node name "Player_<peer_id>" by NetworkManager.
@@ -90,6 +118,9 @@ func _ready() -> void:
 	stamina = max_stamina
 	inventory.changed.connect(_on_inventory_changed)
 	EventBus.world_loaded.connect(_on_world_loaded, CONNECT_ONE_SHOT)
+	# Kick off the initial clip; setter fires for subsequent transitions and
+	# replicated syncs, but the default value never triggers it.
+	_play_anim(anim_state)
 
 	# Only the owning peer drives input, camera, and physics for this player.
 	# Non-owner peers see a replicated ghost driven by the MultiplayerSynchronizer.

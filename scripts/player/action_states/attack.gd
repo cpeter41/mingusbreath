@@ -5,7 +5,7 @@ var _sword: Sword
 
 
 func enter() -> void:
-	_sword = player.get_node("WeaponMount/Sword")
+	_sword = player.weapon_mount.get_node("Sword")
 	_sword.swing()
 	_timer = Sword.ATTACK_DURATION
 
