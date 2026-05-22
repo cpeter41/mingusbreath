@@ -1,5 +1,12 @@
 extends ActionState
 
+
+func enter() -> void:
+	# Reached when an action (attack/block/dodge) ends. Hand the animation
+	# channel back to the movement SM so locomotion clips resume.
+	player.movementSM.reassert_anim()
+
+
 # physics_update instead of handle_input to allow for holding attack/block button
 func physics_update(_delta: float) -> void:
 	if not player.on_boat and Controls.dodge_just_pressed():

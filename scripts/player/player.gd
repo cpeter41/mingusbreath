@@ -40,6 +40,11 @@ const ANIM_FOR_STATE := {
 	&"jump":   &"Idle",
 	&"fall":   &"Idle",
 	&"swim":   &"Idle",
+	# Action-state clips. The attack/dodge action-states push these onto
+	# anim_state; they take priority over locomotion for their duration
+	# (see MovementSM._push_anim).
+	&"attack": &"Attack",
+	&"dodge":  &"Roll",
 }
 var anim_state: StringName = &"idle":
 	set(v):
