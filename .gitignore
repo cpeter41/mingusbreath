@@ -20,6 +20,10 @@ desktop.ini
 .vscode/
 .idea/
 
+# Blender auto-backups
+*.blend1
+*.blend2
+
 # Claude Code — local per-user config
 .claude/settings.local.json
 

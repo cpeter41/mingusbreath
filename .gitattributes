@@ -1,0 +1,20 @@
+# Normalize line endings: store LF in the repo, check out LF everywhere.
+# Godot writes its text files (.import, project.godot, .tscn, .tres, .gd)
+# with LF — pinning eol=lf stops phantom CRLF diffs on Windows.
+* text=auto eol=lf
+
+# Binary assets — never touch line endings.
+# NOTE: .obj is Wavefront text, not binary — it falls under the rule above.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.blend binary
+*.fbx   binary
+*.glb   binary
+*.bin   binary
+*.ogg   binary
+*.wav   binary
+*.mp3   binary
+*.ttf   binary
+*.otf   binary
