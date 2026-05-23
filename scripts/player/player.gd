@@ -5,8 +5,6 @@ extends CharacterBody3D
 # on the owner. Camera/input attach only on the owning peer.
 
 const MOUSE_SENSITIVITY := 0.003
-const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
-const SHIELD_SCENE  := preload("res://scenes/weapons/Shield.tscn")
 const RESPAWN_FALLBACK_Y := 15.0
 const BOAT_SPAWN_DIST := 8.0
 
@@ -51,7 +49,7 @@ var anim_state: StringName = &"idle":
 		anim_state = v
 		_play_anim(v)
 
-# Replicated via the spawn packet (SRC_player properties/10, spawn=true, mode
+# Replicated via the spawn packet (SRC_player properties/8, spawn=true, mode
 # Never). Host sets this before add_child in NetworkManager._spawn_player_for_peer
 # so every peer receives the correct class atomically with the node. The setter
 # applies stats from ClassDef — safe to fire before _ready since it touches
@@ -60,21 +58,6 @@ var class_id: StringName = ProfileSave.DEFAULT_CLASS_ID:
 	set(v):
 		class_id = v
 		_apply_class()
-
-# Replicated visual flags. Owner sets these from inventory contents; all peers
-# spawn/free the Sword/Shield mount nodes based on flag transitions. Inventory
-# contents themselves are not replicated — only the visible loadout state is.
-var has_sword: bool = false:
-	set(v):
-		has_sword = v
-		_update_sword_visual()
-var has_shield: bool = false:
-	set(v):
-		var was := has_shield
-		has_shield = v
-		_update_shield_visual()
-		if not v and was and is_inside_tree() and is_multiplayer_authority() and is_blocking and actionSM != null:
-			actionSM.transition_to("idle")
 
 @export var speed: float = 5.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -97,7 +80,6 @@ var _saved_col_mask: int = 0
 @onready var actionSM: Node        = $ActionStateMachine
 @onready var inventory: Inventory  = $Inventory
 @onready var weapon_mount: Node3D  = $Model/Monk/CharacterArmature/Skeleton3D/WeaponMount
-@onready var shield_mount: Node3D  = $Model/Monk/CharacterArmature/Skeleton3D/ShieldMount
 @onready var hurtbox: Area3D       = $Hurtbox
 # AnimationPlayer comes from the imported Monk.gltf subscene. Path is the
 # instance's auto-generated tree — update here if the import root name changes.
@@ -163,9 +145,14 @@ func _ready() -> void:
 	# before hp / stamina latch onto them. Idempotent — also runs from the
 	# class_id setter on guests when the spawn packet arrives.
 	_apply_class()
+	# Visual + combat side: needs @onready vars resolved, so it runs here in
+	# _ready rather than from the class_id setter. Runs on every peer so remote
+	# ghosts show the correct weapon and route attacks through the same per-class
+	# state script.
+	_mount_class_weapon()
+	_apply_attack_state()
 	hp = max_hp
 	stamina = max_stamina
-	inventory.changed.connect(_on_inventory_changed)
 	EventBus.world_loaded.connect(_on_world_loaded, CONNECT_ONE_SHOT)
 	# Kick off the initial clip; setter fires for subsequent transitions and
 	# replicated syncs, but the default value never triggers it.
@@ -194,33 +181,48 @@ func _ready() -> void:
 	ProfileSave.register(inventory, "Inventory")
 
 
-func _on_inventory_changed() -> void:
-	# Owner's inventory is the source of truth. Update the replicated visual
-	# flags; setters spawn/free the mount nodes on every peer.
-	if not is_multiplayer_authority():
+## Instantiates the class's weapon scene under weapon_mount. Idempotent (skips
+## if a weapon is already mounted, so respawn / re-entry leaves it in place).
+## Sets the weapon root's owner to self so the hitbox can read its attacker via
+## get_parent().owner (see scripts/combat/hitbox.gd).
+func _mount_class_weapon() -> void:
+	if weapon_mount == null:
 		return
-	has_sword = inventory.count_of(&"sword") > 0
-	has_shield = inventory.count_of(&"shield") > 0
-
-
-func _update_sword_visual() -> void:
-	if not is_inside_tree() or weapon_mount == null:
+	if weapon_mount.get_child_count() > 0:
 		return
-	var existing := weapon_mount.get_node_or_null("Sword")
-	if has_sword and existing == null:
-		weapon_mount.add_child(SWORD_SCENE.instantiate())
-	elif not has_sword and existing != null:
-		existing.queue_free()
-
-
-func _update_shield_visual() -> void:
-	if not is_inside_tree() or shield_mount == null:
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null or cdef.weapon_scene == null:
 		return
-	var existing := shield_mount.get_node_or_null("Shield")
-	if has_shield and existing == null:
-		shield_mount.add_child(SHIELD_SCENE.instantiate())
-	elif not has_shield and existing != null:
-		existing.queue_free()
+	var w: Node = cdef.weapon_scene.instantiate()
+	weapon_mount.add_child(w)
+	w.owner = self
+
+
+## Swaps the Attack action-state node's script to the class's attack_state_script.
+## ActionSM._ready caches the node by identity, so changing only the script
+## (not the node) keeps the cache valid. No-op if the script already matches.
+func _apply_attack_state() -> void:
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null or cdef.attack_state_script == null:
+		return
+	if actionSM == null:
+		return
+	var atk: Node = actionSM.get_node_or_null("Attack")
+	if atk == null:
+		return
+	if atk.get_script() != cdef.attack_state_script:
+		atk.set_script(cdef.attack_state_script)
+
+
+func has_weapon() -> bool:
+	return weapon_mount != null and weapon_mount.get_child_count() > 0
+
+
+func has_block_weapon() -> bool:
+	if not has_weapon():
+		return false
+	var w: Node = weapon_mount.get_child(0)
+	return w != null and w.has_method("raise")
 
 
 ## Awards an item to this player. Runs on the owning peer's authority — the

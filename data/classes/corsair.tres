@@ -1,25 +1,17 @@
-[gd_resource type="Resource" script_class="ClassDef" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="ClassDef" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/class_def.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/data/class_loadout_entry.gd" id="2"]
-
-[sub_resource type="Resource" id="grant_sword"]
-script = ExtResource("2")
-item_id = &"sword"
-count = 1
-
-[sub_resource type="Resource" id="grant_shield"]
-script = ExtResource("2")
-item_id = &"shield"
-count = 1
+[ext_resource type="PackedScene" path="res://scenes/weapons/RogueDagger.tscn" id="2_weapon"]
+[ext_resource type="Script" path="res://scripts/player/action_states/melee_attack.gd" id="3_atk"]
 
 [resource]
 script = ExtResource("1")
 id = &"corsair"
 display_name = "Corsair"
-description = "Swift sea-raider. Sword and shield."
+description = "Swift sea-raider. Strikes fast with a rogue's dagger."
 max_hp = 100.0
 max_stamina = 150.0
 move_speed = 5.0
-starting_inventory = Array[Resource]([SubResource("grant_sword"), SubResource("grant_shield")])
-primary_weapon = &"sword"
+starting_inventory = Array[Resource]([])
+weapon_scene = ExtResource("2_weapon")
+attack_state_script = ExtResource("3_atk")

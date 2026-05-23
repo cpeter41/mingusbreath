@@ -157,4 +157,11 @@ _spawnable_scenes = PackedStringArray("res://scenes/items/ItemPickup.tscn")
 spawn_path = NodePath("../Pickups")
 spawn_limit = 64
 
+[node name="Projectiles" type="Node3D" parent="."]
+
+[node name="ProjectileSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/weapons/Harpoon.tscn")
+spawn_path = NodePath("../Projectiles")
+spawn_limit = 32
+
 [node name="ZoneDebug" parent="." instance=ExtResource("9_zd")]

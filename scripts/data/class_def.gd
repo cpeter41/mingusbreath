@@ -1,7 +1,7 @@
 class_name ClassDef
 extends Resource
 
-# Player class definition. Schema-only — see docs/planning/PLAYER_CLASS_FRAMEWORK.md.
+# Player class definition. Schema-only — see docs/planning/class-system/PLAYER_CLASS_FRAMEWORK.md.
 # Add a new per-class parameter = one @export here + one line in Player._apply_class().
 
 @export var id: StringName = &""
@@ -21,7 +21,11 @@ extends Resource
 # script reference). Mirrors InventoryRegistry/ItemDef typing style.
 @export var starting_inventory: Array[Resource] = []
 
-# Item id (from data/items/) of the class's primary weapon. Informational in
-# this phase; kept separate from starting_inventory so future logic (HUD weapon
-# glyph, default-equipped slot, model/anim selection) can read it directly.
-@export var primary_weapon: StringName = &""
+# Weapon scene instanced under Player.weapon_mount on spawn. Drives the player's
+# visible loadout and combat behavior (the scene's root script implements the
+# attack-trigger method called by the matching action state).
+@export var weapon_scene: PackedScene = null
+
+# Action-state script swapped onto Player/ActionStateMachine/Attack at spawn.
+# Picks melee swing / shield bash / ranged fire to match the weapon scene.
+@export var attack_state_script: Script = null

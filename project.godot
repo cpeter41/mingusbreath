@@ -36,6 +36,7 @@ DiscoveryLog="*res://globals/discovery_log.gd"
 AudioDirector="*res://globals/audio_director.gd"
 BoatManager="*res://globals/boat_manager.gd"
 PickupManager="*res://globals/pickup_manager.gd"
+ProjectileManager="*res://globals/projectile_manager.gd"
 CommandRegistry="*res://scripts/commands/command_registry.gd"
 Controls="*res://globals/controls.gd"
 

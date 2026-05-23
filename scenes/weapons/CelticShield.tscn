@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapons/celtic_shield.gd" id="1_cs"]
+[ext_resource type="Script" uid="uid://cvjhxi8qfderd" path="res://scripts/combat/hitbox.gd" id="2_hb"]
+[ext_resource type="PackedScene" uid="uid://0no774na8ue2" path="res://assets/weapons/medieval_weapons/FBX/Shield_Celtic_Golden.fbx" id="3_model"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(0.45, 0.55, 0.12)
+
+[node name="CelticShield" type="Node3D"]
+script = ExtResource("1_cs")
+
+[node name="Model" parent="." instance=ExtResource("3_model")]
+
+[node name="Hitbox" type="Area3D" parent="."]
+script = ExtResource("2_hb")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hitbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+shape = SubResource("BoxShape3D_1")

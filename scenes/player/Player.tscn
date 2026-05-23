@@ -11,7 +11,7 @@
 [ext_resource type="Script" uid="uid://d27sqii60662m" path="res://scripts/player/movement_states/swim.gd" id="9_swim"]
 [ext_resource type="Script" uid="uid://ctshxxwb1ito4" path="res://scripts/player/action_sm.gd" id="10_180ig"]
 [ext_resource type="Script" uid="uid://be2yccai2wdfa" path="res://scripts/player/action_states/idle.gd" id="11_20koh"]
-[ext_resource type="Script" uid="uid://cmcuef4yexe0h" path="res://scripts/player/action_states/attack.gd" id="12_ov1oi"]
+[ext_resource type="Script" path="res://scripts/player/action_states/melee_attack.gd" id="12_ov1oi"]
 [ext_resource type="Script" uid="uid://drdgh25wibco4" path="res://scripts/inventory/inventory.gd" id="13_20koh"]
 [ext_resource type="Script" uid="uid://cqduk17gut6e2" path="res://scripts/player/action_states/block.gd" id="14_blk"]
 [ext_resource type="Script" uid="uid://cx5r2nalp3kqw" path="res://scripts/player/action_states/dodge.gd" id="15_dodg"]
@@ -40,18 +40,12 @@ properties/5/replication_mode = 2
 properties/6/path = NodePath(".:is_parrying")
 properties/6/spawn = true
 properties/6/replication_mode = 2
-properties/7/path = NodePath(".:has_sword")
+properties/7/path = NodePath(".:anim_state")
 properties/7/spawn = true
 properties/7/replication_mode = 2
-properties/8/path = NodePath(".:has_shield")
+properties/8/path = NodePath(".:class_id")
 properties/8/spawn = true
-properties/8/replication_mode = 2
-properties/9/path = NodePath(".:anim_state")
-properties/9/spawn = true
-properties/9/replication_mode = 2
-properties/10/path = NodePath(".:class_id")
-properties/10/spawn = true
-properties/10/replication_mode = 0
+properties/8/replication_mode = 0
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
