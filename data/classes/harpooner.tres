@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ClassDef" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/class_def.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/data/class_loadout_entry.gd" id="2"]
+
+[sub_resource type="Resource" id="grant_sword"]
+script = ExtResource("2")
+item_id = &"sword"
+count = 1
+
+[sub_resource type="Resource" id="grant_shield"]
+script = ExtResource("2")
+item_id = &"shield"
+count = 1
+
+[resource]
+script = ExtResource("1")
+id = &"harpooner"
+display_name = "Harpooner"
+description = "Hunter of the deep. Sword and shield."
+max_hp = 100.0
+max_stamina = 150.0
+move_speed = 5.0
+starting_inventory = Array[Resource]([SubResource("grant_sword"), SubResource("grant_shield")])
+primary_weapon = &"sword"

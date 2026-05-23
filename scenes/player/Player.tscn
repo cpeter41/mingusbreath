@@ -49,6 +49,9 @@ properties/8/replication_mode = 2
 properties/9/path = NodePath(".:anim_state")
 properties/9/spawn = true
 properties/9/replication_mode = 2
+properties/10/path = NodePath(".:class_id")
+properties/10/spawn = true
+properties/10/replication_mode = 0
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4

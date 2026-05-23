@@ -51,6 +51,16 @@ var anim_state: StringName = &"idle":
 		anim_state = v
 		_play_anim(v)
 
+# Replicated via the spawn packet (SRC_player properties/10, spawn=true, mode
+# Never). Host sets this before add_child in NetworkManager._spawn_player_for_peer
+# so every peer receives the correct class atomically with the node. The setter
+# applies stats from ClassDef — safe to fire before _ready since it touches
+# only plain fields, no @onready node access.
+var class_id: StringName = ProfileSave.DEFAULT_CLASS_ID:
+	set(v):
+		class_id = v
+		_apply_class()
+
 # Replicated visual flags. Owner sets these from inventory contents; all peers
 # spawn/free the Sword/Shield mount nodes based on flag transitions. Inventory
 # contents themselves are not replicated — only the visible loadout state is.
@@ -94,6 +104,36 @@ var _saved_col_mask: int = 0
 @onready var anim_player: AnimationPlayer = $Model/Monk/AnimationPlayer
 
 
+## Applies stats from the resolved ClassDef. Touches only plain fields so it's
+## safe to call from the class_id setter (which may fire before _ready, before
+## @onready vars are resolved). Idempotent.
+func _apply_class() -> void:
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null:
+		return
+	max_hp = cdef.max_hp
+	max_stamina = cdef.max_stamina
+	speed = cdef.move_speed
+
+
+## Grants the class's starting items, mirroring the old hardcoded sword+shield
+## block: per-item count_of==0 guard, so a returning character (inventory
+## already restored by ProfileSave.load_or_init()) is not double-granted.
+## Authority-only — call site lives inside _on_world_loaded's is_authority branch.
+func _apply_starting_inventory() -> void:
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null:
+		return
+	for entry in cdef.starting_inventory:
+		if entry == null:
+			continue
+		var item_id: StringName = entry.item_id
+		if item_id == &"":
+			continue
+		if inventory.count_of(item_id) == 0:
+			inventory.add(item_id, entry.count)
+
+
 func _play_anim(state: StringName) -> void:
 	if anim_player == null:
 		return
@@ -119,6 +159,10 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	# Apply class first so max_hp / max_stamina / speed reflect the class def
+	# before hp / stamina latch onto them. Idempotent — also runs from the
+	# class_id setter on guests when the spawn packet arrives.
+	_apply_class()
 	hp = max_hp
 	stamina = max_stamina
 	inventory.changed.connect(_on_inventory_changed)
@@ -372,11 +416,9 @@ func _on_world_loaded() -> void:
 	if not is_multiplayer_authority():
 		_world_ready = true
 		return
-	# Grant starter loadout once. Idempotent so it survives save/load round-trips.
-	if inventory.count_of(&"sword") == 0:
-		inventory.add(&"sword", 1)
-	if inventory.count_of(&"shield") == 0:
-		inventory.add(&"shield", 1)
+	# Grant the class's starting loadout once. Idempotent (per-item count_of
+	# guard) so it survives save/load round-trips.
+	_apply_starting_inventory()
 
 	# Saved position from the profile wins; otherwise spawn at the mainland
 	# anchor offset to this peer's spawn slot.

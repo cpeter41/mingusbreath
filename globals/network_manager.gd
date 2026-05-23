@@ -289,7 +289,7 @@ func get_stable_id(peer_id: int) -> String:
 ## that player's saved position by a stable name.
 func _on_connected_to_server() -> void:
 	_peer_connected = true
-	_register_character.rpc_id(1, ProfileSave.current_character)
+	_register_character.rpc_id(1, ProfileSave.current_character, ProfileSave.current_class())
 	# A mid-session joiner built its World during the auth phase, before this
 	# fired — so the _guest_world_ready RPC was deferred. Send it now.
 	if _world_built_pending:
@@ -298,13 +298,24 @@ func _on_connected_to_server() -> void:
 
 
 @rpc("any_peer", "reliable")
-func _register_character(char_name: String) -> void:
+func _register_character(char_name: String, class_id: StringName = ProfileSave.DEFAULT_CLASS_ID) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
 	if not peers.has(sender):
 		peers[sender] = {"steam_id": 0, "display_name": "Peer_%d" % sender}
 	peers[sender]["character"] = char_name
+	peers[sender]["class"] = class_id
+
+
+## Class id for a peer, resolved consistently for host and guests:
+## - host (and OFFLINE solo) reads its own ProfileSave;
+## - guests come from peers[peer_id]["class"], populated by _register_character.
+func _class_for_peer(peer_id: int) -> StringName:
+	if peer_id == multiplayer.get_unique_id():
+		return ProfileSave.current_class()
+	var rec: Dictionary = peers.get(peer_id, {})
+	return StringName(rec.get("class", ProfileSave.DEFAULT_CLASS_ID))
 
 
 func _player_node(peer_id: int) -> Node:
@@ -555,6 +566,11 @@ func _spawn_player_for_peer(peer_id: int) -> void:
 	var mp := IslandRegistry.get_mainland_placement()
 	if mp != null:
 		p.position = mp.position + Vector3(0.0, 20.0, 0.0) + p._spawn_offset_for_peer(peer_id)
+	# Set class BEFORE add_child so the MultiplayerSpawner snapshots it into the
+	# spawn packet (class_id is marked spawn=true, mode Never in SRC_player).
+	# This avoids an RPC-vs-spawn race; every peer receives the correct class
+	# atomically with the node.
+	p.class_id = _class_for_peer(peer_id)
 	players.add_child(p, true)
 	print("[NetworkManager] spawned Player_%d" % peer_id)
 	# Restore the player's saved position from the world save, if any. Reject a
