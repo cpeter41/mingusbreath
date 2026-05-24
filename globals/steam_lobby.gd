@@ -90,7 +90,9 @@ func _on_lobby_created(connect_result: int, new_lobby_id: int) -> void:
 	NetworkManager.start_host()
 
 
-func _on_lobby_joined(joined_lobby_id: int, _permissions: int, _locked: bool, response: int) -> void:
+func _on_lobby_joined(
+	joined_lobby_id: int, _permissions: int, _locked: bool, response: int
+) -> void:
 	if response != Steam.CHAT_ROOM_ENTER_RESPONSE_SUCCESS:
 		push_error("[SteamLobby] join failed: response=%d" % response)
 		return
@@ -101,7 +103,9 @@ func _on_lobby_joined(joined_lobby_id: int, _permissions: int, _locked: bool, re
 	NetworkManager.start_client(owner_id)
 
 
-func _on_lobby_chat_update(this_lobby_id: int, change_id: int, making_change_id: int, chat_state: int) -> void:
+func _on_lobby_chat_update(
+	this_lobby_id: int, change_id: int, making_change_id: int, chat_state: int
+) -> void:
 	lobby_chat_update.emit(this_lobby_id, change_id, making_change_id, chat_state)
 
 

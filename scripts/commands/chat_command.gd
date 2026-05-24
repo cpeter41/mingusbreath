@@ -18,5 +18,5 @@ func get_category() -> StringName:
 	return &"default"
 
 # args is the tokenised remainder after the command name (space-split, no "/").
-func execute(args: Array) -> String:
+func execute(_args: Array) -> String:
 	return ""

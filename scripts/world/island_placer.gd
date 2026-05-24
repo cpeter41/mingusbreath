@@ -62,7 +62,10 @@ static func place(
 	for _i in remaining:
 		slot_defs.append(null)
 	if guaranteed > island_count - 1:
-		push_warning("IslandPlacer: %d guaranteed slots exceed island_count-1=%d; some defs may be short" % [guaranteed, island_count - 1])
+		push_warning(
+			"IslandPlacer: %d guaranteed slots exceed island_count-1=%d; some defs may be short"
+			% [guaranteed, island_count - 1]
+		)
 
 	for slot in range(1, island_count):
 		var queue_index := slot - 1
@@ -94,10 +97,16 @@ static func place(
 					placements, chosen_def, slot, rng, world_seed,
 					lo, hi, max_attempts, false)
 			if placed:
-				push_warning("IslandPlacer: slot %d — zone-match fallback (could not find matching zone)" % slot)
+				push_warning(
+					"IslandPlacer: slot %d — zone-match fallback (could not find matching zone)"
+					% slot
+				)
 
 		if not placed:
-			push_warning("IslandPlacer: slot %d — could not place after %d attempts, skipping" % [slot, max_attempts * 2])
+			push_warning(
+				"IslandPlacer: slot %d — could not place after %d attempts, skipping"
+				% [slot, max_attempts * 2]
+			)
 
 	return placements
 
@@ -153,7 +162,9 @@ static func _pick_weighted(defs: Array, rng: RandomNumberGenerator) -> IslandDef
 
 static func _too_close(candidate: Vector3, radius: float, placements: Array) -> bool:
 	for p in placements:
-		var min_dist: float = (p as IslandPlacement).def.footprint_radius + radius + ISLAND_SPACING_BUFFER_M
+		var min_dist: float = (
+			(p as IslandPlacement).def.footprint_radius + radius + ISLAND_SPACING_BUFFER_M
+		)
 		if candidate.distance_to((p as IslandPlacement).position) < min_dist:
 			return true
 	return false

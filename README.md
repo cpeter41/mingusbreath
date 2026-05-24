@@ -34,6 +34,13 @@
    - ~~Place a `steam_appid.txt` containing `480` (the Spacewar test app id)
      next to `project.godot`.~~
 4. Open `project.godot` in Godot 4.6 and press F5 to run.
+5. *(Optional — to run the test suite)* On a fresh checkout the GdUnit4 test
+   framework is not included. Install it once:
+   ```sh
+   pwsh tests/install_gdunit4.ps1      # POSIX: tests/install_gdunit4.sh
+   godot --headless --path . --import  # refresh the class cache
+   ```
+   Then run `pwsh tests/run_tests.ps1`. See `tests/README.md` for details.
 
 ### Running
 
@@ -56,7 +63,7 @@ scripts/        GDScript logic (player, combat, ai, ships, world, crafting, inve
 scenes/         .tscn files mirroring scripts/ layout (+ scenes/ui/LobbyMenu.tscn)
 shaders/        Water, foliage wind, toon, sky, world-border
 assets/         Models, textures, sfx, music
-tests/          GUT tests (save + gen systems)
+tests/          GdUnit4 tests (unit + integration; mirrors scripts/ layout)
 docs/planning/  Architecture doc, phase plans, multiplayer retrofit plan
 ```
 

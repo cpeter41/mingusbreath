@@ -13,7 +13,10 @@ func _lean_mesh(target_deg: float, duration: float) -> void:
 	if _mesh_tween:
 		_mesh_tween.kill()
 	_mesh_tween = enemy.create_tween()
-	_mesh_tween.tween_property(enemy.mesh, "rotation:x", deg_to_rad(target_deg), duration).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	var tw := _mesh_tween.tween_property(
+		enemy.mesh, "rotation:x", deg_to_rad(target_deg), duration
+	)
+	tw.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 
 func _reset_mesh_lean() -> void:
