@@ -70,11 +70,15 @@ func _on_area_entered(area: Area3D) -> void:
 	queue_free()
 
 
-## Terrain (and any other WORLD-layer body) stops the harpoon without damage.
-## Player bodies also live on WORLD; skip the shooter so a self-spawned harpoon
-## doesn't insta-despawn on its own body the frame it leaves the bow.
+## Terrain (StaticBody3D on WORLD) stops the harpoon without damage. Skip
+## CharacterBody3D bodies (players + enemies) — they also live on WORLD but
+## damage routes through their Hurtbox Area3D in _on_area_entered. Without
+## this skip, the body-side collision would fire first and despawn the
+## harpoon before the hurtbox got a chance to register the hit.
 func _on_body_entered(body: Node) -> void:
 	if _hit or not multiplayer.is_server():
+		return
+	if body is CharacterBody3D:
 		return
 	var shooter: Node = get_node_or_null(shooter_path)
 	if body == shooter:

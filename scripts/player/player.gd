@@ -31,7 +31,12 @@ var is_parrying: bool  = false
 # writes this on every transition; the setter fires the matching clip on every
 # peer so remote ghosts animate in lockstep with the owner. Stored as the
 # lowercase movement state name ("idle", "run", "sprint", "jump", "fall", "swim").
-const ANIM_FOR_STATE := {
+#
+# Defaults match the Monk rig's clip names. Each class can override via its
+# ClassDef.anim_overrides dictionary (merged in _apply_character_model) — for
+# example Rogue uses "Dagger_Attack" instead of "Attack". Stored as a var, not
+# a const, so the merge can mutate it per-instance.
+var anim_for_state: Dictionary = {
 	&"idle":   &"Idle",
 	&"run":    &"Walk",
 	&"sprint": &"Run",
@@ -79,11 +84,12 @@ var _saved_col_mask: int = 0
 @onready var movementSM: Node      = $MovementStateMachine
 @onready var actionSM: Node        = $ActionStateMachine
 @onready var inventory: Inventory  = $Inventory
-@onready var weapon_mount: Node3D  = $Model/Monk/CharacterArmature/Skeleton3D/WeaponMount
+@onready var model_root: Node3D    = $Model
 @onready var hurtbox: Area3D       = $Hurtbox
-# AnimationPlayer comes from the imported Monk.gltf subscene. Path is the
-# instance's auto-generated tree — update here if the import root name changes.
-@onready var anim_player: AnimationPlayer = $Model/Monk/AnimationPlayer
+# Both populated by _apply_character_model() at spawn — they live inside the
+# class's character_scene (varies per class) so they can't be @onready paths.
+var weapon_mount: BoneAttachment3D = null
+var anim_player: AnimationPlayer = null
 
 
 ## Applies stats from the resolved ClassDef. Touches only plain fields so it's
@@ -119,8 +125,8 @@ func _apply_starting_inventory() -> void:
 func _play_anim(state: StringName) -> void:
 	if anim_player == null:
 		return
-	var clip: StringName = ANIM_FOR_STATE.get(state, &"Idle")
-	if anim_player.current_animation != String(clip):
+	var clip: StringName = anim_for_state.get(state, &"Idle")
+	if anim_player.has_animation(String(clip)) and anim_player.current_animation != String(clip):
 		anim_player.play(clip)
 
 
@@ -147,8 +153,11 @@ func _ready() -> void:
 	_apply_class()
 	# Visual + combat side: needs @onready vars resolved, so it runs here in
 	# _ready rather than from the class_id setter. Runs on every peer so remote
-	# ghosts show the correct weapon and route attacks through the same per-class
-	# state script.
+	# ghosts show the correct character / weapon / attack state.
+	# Order matters: character must mount first to create the WeaponMount bone
+	# attachment + locate the AnimationPlayer that the weapon and anim setter
+	# depend on.
+	_apply_character_model()
 	_mount_class_weapon()
 	_apply_attack_state()
 	hp = max_hp
@@ -179,6 +188,61 @@ func _ready() -> void:
 	# the host's world save (PlayerStore) — the host pushes it via the
 	# set_spawn_position RPC when this player spawns.
 	ProfileSave.register(inventory, "Inventory")
+
+
+## Instantiates the class's character_scene under model_root. Locates the
+## Skeleton3D + AnimationPlayer inside it, creates a "Weapon.R" BoneAttachment3D
+## for the weapon mount, and merges the class's anim_overrides into
+## anim_for_state. Runs on every peer so remote ghosts render the correct body.
+func _apply_character_model() -> void:
+	if model_root == null:
+		return
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null or cdef.character_scene == null:
+		return
+	# Clear any prior character (idempotent on respawn / class swap).
+	for child in model_root.get_children():
+		child.queue_free()
+	var character: Node = cdef.character_scene.instantiate()
+	character.name = "Character"
+	model_root.add_child(character)
+	var skel := _find_node_by_class(character, "Skeleton3D") as Skeleton3D
+	anim_player = _find_node_by_class(character, "AnimationPlayer") as AnimationPlayer
+	if skel != null:
+		weapon_mount = BoneAttachment3D.new()
+		weapon_mount.name = "WeaponMount"
+		weapon_mount.bone_name = "Weapon.R"
+		skel.add_child(weapon_mount)
+	for k in cdef.anim_overrides:
+		anim_for_state[k] = cdef.anim_overrides[k]
+	_apply_anim_loops()
+
+
+# State names whose clips should loop. Action clips (attack/dodge) and one-shot
+# locomotion (jump/fall) play through once. Looping is forced at runtime because
+# the gltf imports default loop_mode to LOOP_NONE per clip.
+const LOOPING_STATES: Array[StringName] = [&"idle", &"run", &"sprint", &"swim"]
+
+func _apply_anim_loops() -> void:
+	if anim_player == null:
+		return
+	for state in LOOPING_STATES:
+		var clip_name: String = String(anim_for_state.get(state, &""))
+		if clip_name == "" or not anim_player.has_animation(clip_name):
+			continue
+		var anim := anim_player.get_animation(clip_name)
+		if anim != null:
+			anim.loop_mode = Animation.LOOP_LINEAR
+
+
+func _find_node_by_class(root: Node, type_name: String) -> Node:
+	if root.get_class() == type_name:
+		return root
+	for child in root.get_children():
+		var found := _find_node_by_class(child, type_name)
+		if found != null:
+			return found
+	return null
 
 
 ## Instantiates the class's weapon scene under weapon_mount. Idempotent (skips

@@ -29,3 +29,15 @@ extends Resource
 # Action-state script swapped onto Player/ActionStateMachine/Attack at spawn.
 # Picks melee swing / shield bash / ranged fire to match the weapon scene.
 @export var attack_state_script: Script = null
+
+# Character model scene (a gltf from assets/characters/...) instanced under
+# Player/Model at spawn. Drives the visible body, skeleton, AnimationPlayer,
+# and the Weapon.R bone the weapon mount attaches to.
+@export var character_scene: PackedScene = null
+
+# Per-class animation-clip overrides. Keys = movement/action state names
+# (idle/run/sprint/jump/fall/swim/attack/dodge); values = clip names in the
+# character's AnimationPlayer. Merged into Player.anim_for_state on spawn so
+# only the differing clips need to be listed (typically just "attack" since
+# each class's character has its own attack-clip name).
+@export var anim_overrides: Dictionary = {}

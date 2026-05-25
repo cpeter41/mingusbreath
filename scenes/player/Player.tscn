@@ -16,7 +16,6 @@
 [ext_resource type="Script" uid="uid://cqduk17gut6e2" path="res://scripts/player/action_states/block.gd" id="14_blk"]
 [ext_resource type="Script" uid="uid://cx5r2nalp3kqw" path="res://scripts/player/action_states/dodge.gd" id="15_dodg"]
 [ext_resource type="Script" uid="uid://drpg4uaiadcnp" path="res://scripts/combat/hurtbox.gd" id="16_hbox"]
-[ext_resource type="PackedScene" uid="uid://4p56fxwqxnbr" path="res://assets/characters/rpg_characters/glTF/Monk.gltf" id="17_monk"]
 
 [sub_resource type="SceneReplicationConfig" id="SRC_player"]
 properties/0/path = NodePath(".:position")
@@ -69,14 +68,6 @@ shape = SubResource("CapsuleShape3D_1")
 
 [node name="Model" type="Node3D" parent="." unique_id=1725943389]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0)
-
-[node name="Monk" parent="Model" unique_id=407825118 instance=ExtResource("17_monk")]
-
-[node name="WeaponMount" type="BoneAttachment3D" parent="Model/Monk/CharacterArmature/Skeleton3D"]
-bone_name = "Weapon.R"
-
-[node name="ShieldMount" type="BoneAttachment3D" parent="Model/Monk/CharacterArmature/Skeleton3D"]
-bone_name = "Fist.L"
 
 [node name="CameraPivot" type="Node3D" parent="." unique_id=475442067]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
@@ -132,5 +123,3 @@ shape = SubResource("CapsuleShape3D_2")
 
 [node name="Inventory" type="Node" parent="." unique_id=1015320278]
 script = ExtResource("13_20koh")
-
-[editable path="Model/Monk"]
