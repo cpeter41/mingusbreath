@@ -212,6 +212,11 @@ func _apply_attack_state() -> void:
 		return
 	if atk.get_script() != cdef.attack_state_script:
 		atk.set_script(cdef.attack_state_script)
+		# set_script reinitializes the node's vars to script defaults, wiping
+		# the ActionState.player / actionSM refs that ActionSM._ready assigned.
+		# Re-bind them here so the new script can reach the player on enter().
+		atk.player = self
+		atk.actionSM = actionSM
 
 
 func has_weapon() -> bool:
@@ -223,6 +228,27 @@ func has_block_weapon() -> bool:
 		return false
 	var w: Node = weapon_mount.get_child(0)
 	return w != null and w.has_method("raise")
+
+
+const AIM_RANGE := 200.0
+
+## World point the player is currently aiming at — camera origin + forward,
+## clipped to the first world/enemy surface hit. Excludes this player's own
+## bodies. Used by ranged weapons to derive flight direction from crosshair
+## aim rather than the weapon's local axis.
+func aim_target() -> Vector3:
+	var cam := camera_pivot.get_node_or_null("SpringArm3D/Camera3D") as Camera3D
+	if cam == null:
+		return global_position + Vector3.FORWARD * AIM_RANGE
+	var origin := cam.global_position
+	var forward := -cam.global_transform.basis.z.normalized()
+	var end := origin + forward * AIM_RANGE
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(origin, end)
+	q.collision_mask = CollisionLayers.WORLD | CollisionLayers.HURTBOX
+	q.exclude = [self.get_rid(), hurtbox.get_rid()]
+	var hit := space.intersect_ray(q)
+	return hit["position"] if not hit.is_empty() else end
 
 
 ## Awards an item to this player. Runs on the owning peer's authority — the

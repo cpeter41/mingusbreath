@@ -437,6 +437,20 @@ func _damage_event(attacker_path: NodePath, target_path: NodePath, weapon_id: St
 	EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)
 
 
+## Debug-only: broadcast a projectile impact point to every peer so each peer's
+## F2 debug overlay (ZoneDebug) can drop a marker. Mirrors broadcast_damage.
+func broadcast_projectile_hit_debug(pos: Vector3) -> void:
+	if multiplayer.multiplayer_peer == null:
+		EventBus.projectile_hit_debug.emit(pos)
+		return
+	_projectile_hit_debug_event.rpc(pos)
+
+
+@rpc("any_peer", "reliable", "call_local")
+func _projectile_hit_debug_event(pos: Vector3) -> void:
+	EventBus.projectile_hit_debug.emit(pos)
+
+
 ## Broadcast a chat message to every connected peer. call_local so the sender
 ## also sees their own message without a special-case path.
 func broadcast_chat(sender_name: String, text: String) -> void:

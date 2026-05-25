@@ -9,10 +9,17 @@ extends Node3D
 var _plane: MeshInstance3D = null
 
 
+const HIT_MARKER_SIZE := 0.4
+const HIT_MARKER_LIFETIME := 3.0
+
+
 func _ready() -> void:
 	visible = enabled
 	ZoneMap.set_debug_visible(enabled)
 	ZoneMap.debug_toggled.connect(_on_toggle)
+	# Debug projectile-hit markers gate on ZoneMap.debug_visible inside the
+	# handler, not on `enabled`, so toggling F2 immediately starts/stops them.
+	EventBus.projectile_hit_debug.connect(_on_projectile_hit_debug)
 	if not enabled:
 		return
 	_build()
@@ -63,3 +70,50 @@ func _build() -> void:
 	_plane.material_override = mat
 	_plane.position = Vector3(0.0, y_offset, 0.0)
 	add_child(_plane)
+
+
+## F2-gated. Drops a red wireframe cube at the impact point that auto-frees
+## after HIT_MARKER_LIFETIME seconds. Parented to self (a Node3D in World) so
+## the marker survives this script's `visible` toggling — visibility of the
+## zone overlay plane shouldn't hide the hit markers.
+func _on_projectile_hit_debug(pos: Vector3) -> void:
+	if not ZoneMap.debug_visible:
+		return
+	var mi := _make_wire_cube(HIT_MARKER_SIZE, Color(1.0, 0.1, 0.1, 1.0))
+	add_child(mi)
+	mi.global_position = pos
+	# visible flag is owned by self (toggled with F2). Force this marker on
+	# regardless so toggling the zone plane off doesn't hide hit markers.
+	mi.visible = true
+	get_tree().create_timer(HIT_MARKER_LIFETIME).timeout.connect(mi.queue_free)
+
+
+func _make_wire_cube(size: float, color: Color) -> MeshInstance3D:
+	var s := size * 0.5
+	var verts := PackedVector3Array([
+		Vector3(-s,-s,-s), Vector3( s,-s,-s),
+		Vector3( s,-s,-s), Vector3( s, s,-s),
+		Vector3( s, s,-s), Vector3(-s, s,-s),
+		Vector3(-s, s,-s), Vector3(-s,-s,-s),
+		Vector3(-s,-s, s), Vector3( s,-s, s),
+		Vector3( s,-s, s), Vector3( s, s, s),
+		Vector3( s, s, s), Vector3(-s, s, s),
+		Vector3(-s, s, s), Vector3(-s,-s, s),
+		Vector3(-s,-s,-s), Vector3(-s,-s, s),
+		Vector3( s,-s,-s), Vector3( s,-s, s),
+		Vector3( s, s,-s), Vector3( s, s, s),
+		Vector3(-s, s,-s), Vector3(-s, s, s),
+	])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_LINES, arrays)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = color
+	mat.no_depth_test = true   # outline visible through walls — debug
+	mi.material_override = mat
+	return mi
