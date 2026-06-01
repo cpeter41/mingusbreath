@@ -3,7 +3,7 @@ extends Node3D
 
 const PlayerScene := preload("res://scenes/player/Player.tscn")
 const DummyScene  := preload("res://scenes/enemies/TargetDummy.tscn")
-const HuskScene   := preload("res://scenes/enemies/Husk.tscn")
+const EnemyScene  := preload("res://scenes/enemies/Enemy.tscn")
 const HUDScript   := preload("res://scripts/ui/hud.gd")
 const BoatScene   := preload("res://scenes/ships/Boat.tscn")
 
@@ -100,9 +100,11 @@ func _spawn_husks() -> void:
 		Vector2( 8.0,  0.0),
 		Vector2(-8.0,  0.0),
 	]
+	var husk_def := EnemyRegistry.resolve(&"husk")
 	for xz in xz_offsets:
 		var h := _sample_terrain(xz.x, xz.y)
-		var husk := HuskScene.instantiate()
+		var husk := EnemyScene.instantiate()
+		husk.def = husk_def
 		husk.position = Vector3(xz.x, h + 0.9, xz.y)
 		add_child(husk)
 

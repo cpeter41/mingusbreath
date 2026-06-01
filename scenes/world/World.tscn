@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://scripts/world/world_border.gd" id="7_wb"]
 [ext_resource type="Shader" path="res://shaders/world_border.gdshader" id="8_bs"]
 [ext_resource type="PackedScene" path="res://scenes/debug/ZoneDebug.tscn" id="9_zd"]
+[ext_resource type="Script" path="res://scripts/enemies/enemy_spawner.gd" id="10_es"]
 
 [sub_resource type="ShaderMaterial" id="WaterMat_1"]
 shader = ExtResource("7_water")
@@ -146,9 +147,10 @@ spawn_limit = 8
 [node name="Enemies" type="Node3D" parent="."]
 
 [node name="EnemySpawner" type="MultiplayerSpawner" parent="."]
-_spawnable_scenes = PackedStringArray("res://scenes/enemies/Husk.tscn")
+_spawnable_scenes = PackedStringArray("res://scenes/enemies/Enemy.tscn")
 spawn_path = NodePath("../Enemies")
 spawn_limit = 32
+script = ExtResource("10_es")
 
 [node name="Pickups" type="Node3D" parent="."]
 
