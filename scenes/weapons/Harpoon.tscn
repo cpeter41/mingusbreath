@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/projectiles/harpoon.gd" id="1_hp"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.02
+bottom_radius = 0.02
+height = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Mat_1"]
+albedo_color = Color(0.18, 0.18, 0.18, 1)
+metallic = 0.4
+roughness = 0.5
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(0.05, 0.05, 0.6)
+
+[sub_resource type="SceneReplicationConfig" id="SRC_harpoon"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:velocity")
+properties/2/spawn = true
+properties/2/replication_mode = 0
+properties/3/path = NodePath(".:shooter_path")
+properties/3/spawn = true
+properties/3/replication_mode = 0
+
+[node name="Harpoon" type="Area3D"]
+script = ExtResource("1_hp")
+
+[node name="NetSync" type="MultiplayerSynchronizer" parent="."]
+replication_interval = 0.05
+delta_interval = 0.05
+replication_config = SubResource("SRC_harpoon")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = SubResource("Mat_1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_1")

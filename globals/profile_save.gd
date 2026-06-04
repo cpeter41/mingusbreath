@@ -16,6 +16,11 @@ extends Node
 const CHARACTERS_DIR := "user://characters/"
 const LEGACY_PROFILE_PATH := "user://profile.dat"
 const SCHEMA_VERSION := 1
+# Class id used when a character has no sidecar .class file (legacy slot, or
+# the cmdline-auto-created "default" character). Duplicated here rather than
+# read from ClassRegistry to avoid autoload-order dependencies — NetworkManager
+# may call create_character() from its own _ready, before ClassRegistry runs.
+const DEFAULT_CLASS_ID := &"bulwark"
 
 var current_character: String = ""
 
@@ -52,12 +57,53 @@ func list_characters() -> PackedStringArray:
 
 
 ## Creates a new (empty) character slot file and returns its final name.
+## Also seeds the per-character class sidecar with DEFAULT_CLASS_ID so every
+## slot has a class from the moment it exists (overridden by the lobby on the
+## same tick for user-driven creates).
 func create_character(base: String) -> String:
 	var slot_name := SlotUtil.unique_name(CHARACTERS_DIR, base)
 	var f := FileAccess.open(CHARACTERS_DIR + slot_name + ".dat", FileAccess.WRITE)
 	if f != null:
 		f.close()
+	set_character_class(slot_name, DEFAULT_CLASS_ID)
 	return slot_name
+
+
+# ── Class sidecar ────────────────────────────────────────────────
+# Per-character class id stored in user://characters/<name>.class (plain text).
+# A sidecar rather than a field inside <name>.dat because the lobby must read
+# and write class with no world session active — <name>.dat is only written by
+# save() while registered nodes exist.
+
+func _class_path(char_name: String) -> String:
+	return CHARACTERS_DIR + char_name + ".class"
+
+
+func get_character_class(char_name: String) -> StringName:
+	if char_name == "":
+		return DEFAULT_CLASS_ID
+	var p := _class_path(char_name)
+	if not FileAccess.file_exists(p):
+		return DEFAULT_CLASS_ID
+	var f := FileAccess.open(p, FileAccess.READ)
+	if f == null:
+		return DEFAULT_CLASS_ID
+	var s := f.get_as_text().strip_edges()
+	f.close()
+	return StringName(s) if s != "" else DEFAULT_CLASS_ID
+
+
+func set_character_class(char_name: String, class_id: StringName) -> void:
+	if char_name == "":
+		return
+	var f := FileAccess.open(_class_path(char_name), FileAccess.WRITE)
+	if f != null:
+		f.store_string(String(class_id))
+		f.close()
+
+
+func current_class() -> StringName:
+	return get_character_class(current_character)
 
 
 func _profile_path() -> String:
@@ -170,10 +216,13 @@ func delete_profile() -> void:
 		return
 	var profile_file := _profile_path().get_file()
 	var temp_file := _temp_path().get_file()
+	var class_file := _class_path(current_character).get_file()
 	if d.file_exists(profile_file):
 		d.remove(profile_file)
 	if d.file_exists(temp_file):
 		d.remove(temp_file)
+	if d.file_exists(class_file):
+		d.remove(class_file)
 
 
 func _apply_defaults() -> void:

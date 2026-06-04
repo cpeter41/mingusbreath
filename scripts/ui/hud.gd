@@ -33,6 +33,7 @@ func _ready() -> void:
 	_add_death_fade()
 	_add_coords_label()
 	_add_biome_label()
+	_add_reticle()
 
 	var chat := ChatPanel.new()
 	chat.name = "ChatPanel"
@@ -151,6 +152,18 @@ func _add_pickup_label() -> void:
 	_pickup_label.add_theme_font_size_override("font_size", 18)
 	_pickup_label.modulate.a = 0.0
 	add_child(_pickup_label)
+
+
+func _add_reticle() -> void:
+	var dot := ColorRect.new()
+	dot.name = "Reticle"
+	dot.color = Color(1.0, 1.0, 1.0, 0.85)
+	dot.set_anchors_preset(Control.PRESET_CENTER)
+	dot.custom_minimum_size = Vector2(6, 6)
+	dot.size = Vector2(6, 6)
+	dot.position = -dot.size * 0.5
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dot)
 
 
 func _add_death_fade() -> void:

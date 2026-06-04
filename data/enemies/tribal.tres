@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_def.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/characters/UltimateMonsters/Big/glTF/Tribal.gltf" id="2_model"]
+
+[resource]
+script = ExtResource("1")
+id = &"tribal"
+display_name = "Tribal"
+max_hp = 55.0
+damage = 10.0
+move_speed = 3.8
+sense_radius = 14.0
+attack_range = 1.8
+attack_cooldown = 1.8
+flee_hp_ratio = 0.15
+loot_drops = [&"scrap"]
+character_scene = ExtResource("2_model")
+anim_overrides = {}

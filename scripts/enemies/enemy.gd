@@ -21,6 +21,10 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var attack_hitbox: Area3D = $AttackHitbox
 @onready var mesh: MeshInstance3D = $Mesh
 
+# Populated by _apply_character_model() at spawn — lives inside the def's
+# character_scene (varies per enemy) so can't be an @onready path.
+var anim_player: AnimationPlayer = null
+
 
 func _ready() -> void:
 	assert(def != null, "Enemy requires an EnemyDef resource")
@@ -28,6 +32,7 @@ func _ready() -> void:
 	spawn_anchor = global_position
 	attack_hitbox.monitoring = false
 	_ensure_collision_shapes()
+	_apply_character_model()
 
 	# Server-authoritative: only the host runs AI + physics + the hitbox. Clients
 	# freeze and display the replicated transform / hp / telegraph state.
@@ -106,6 +111,41 @@ func _die(source: Node) -> void:
 func _drop_loot() -> void:
 	for item_id in def.loot_drops:
 		PickupManager.spawn_loot(item_id, 1, global_position + Vector3.UP * 0.5)
+
+
+## Instantiates the def's character_scene as a child of the placeholder $Mesh
+## node. $Mesh keeps its transform (action states tilt it for lean/telegraph)
+## but its capsule visual is cleared so only the rig renders. Locates the
+## AnimationPlayer inside the rig for the FSM to drive.
+func _apply_character_model() -> void:
+	if def == null or def.character_scene == null:
+		return
+	if mesh == null:
+		return
+	# Clear placeholder capsule but keep node — attack lean tilts mesh.rotation.x.
+	mesh.mesh = null
+	# Idempotent on respawn / def swap.
+	for child in mesh.get_children():
+		if child.name == "Character":
+			child.queue_free()
+	var character: Node = def.character_scene.instantiate()
+	character.name = "Character"
+	mesh.add_child(character)
+	# Rigged glTF chars import facing +Z; Godot forward is -Z. Player.tscn bakes
+	# this fix on its $Model node; we apply it in code since $Mesh has no preset.
+	if character is Node3D:
+		(character as Node3D).rotate_y(PI)
+	anim_player = _find_node_by_class(character, "AnimationPlayer") as AnimationPlayer
+
+
+func _find_node_by_class(root: Node, klass: String) -> Node:
+	if root.is_class(klass):
+		return root
+	for child in root.get_children():
+		var hit := _find_node_by_class(child, klass)
+		if hit != null:
+			return hit
+	return null
 
 
 func _apply_telegraph_visual(on: bool) -> void:

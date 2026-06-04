@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/weapons/dagger.gd" id="1_dgr"]
+[ext_resource type="Script" uid="uid://cvjhxi8qfderd" path="res://scripts/combat/hitbox.gd" id="2_hb"]
+[ext_resource type="PackedScene" uid="uid://bvpmvjvf2wnbs" path="res://assets/characters/rpg_characters/FBX/Only Weapons/Rogue_Dagger.fbx" id="3_model"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(0.12, 0.6, 0.12)
+
+[node name="RogueDagger" type="Node3D"]
+script = ExtResource("1_dgr")
+
+[node name="Model" parent="." instance=ExtResource("3_model")]
+
+[node name="Hitbox" type="Area3D" parent="."]
+script = ExtResource("2_hb")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hitbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("BoxShape3D_1")

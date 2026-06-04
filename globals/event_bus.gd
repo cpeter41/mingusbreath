@@ -25,3 +25,6 @@ signal biome_entered(biome: BiomeDef)
 signal chat_message_received(sender: String, text: String)
 # "/" prefix messages — emitted locally only; wired up by future command handler.
 signal chat_command_entered(text: String)
+# Debug-only: emitted on every peer when a projectile hits something. Listeners
+# (ZoneDebug) gate their response on ZoneMap.debug_visible.
+signal projectile_hit_debug(world_position: Vector3)

@@ -1,7 +1,7 @@
 extends ActionState
 
 const DODGE_SPEED    := 13.0
-const DODGE_DURATION := 0.25
+const DODGE_DURATION := 1.0   # matches Monk.gltf "Roll" clip length
 
 var _timer: float     = 0.0
 var _dodge_dir: Vector3 = Vector3.ZERO
@@ -16,6 +16,9 @@ func enter() -> void:
 		_dodge_dir = (player.transform.basis * Vector3(0.0, 0.0, -1.0)).normalized()
 	if player.hurtbox:
 		player.hurtbox.monitorable = false
+	# Replicated: the setter fires the Roll clip on every peer. MovementSM
+	# skips its own anim pushes while this action state is active.
+	player.anim_state = &"dodge"
 
 
 func physics_update(delta: float) -> void:
