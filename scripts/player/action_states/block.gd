@@ -20,7 +20,7 @@ func physics_update(delta: float) -> void:
 		if _parry_timer <= 0.0:
 			player.is_parrying = false
 
-	if not Controls.block_held() or not player.has_shield:
+	if not Controls.block_held() or not player.has_block_weapon():
 		actionSM.transition_to("idle")
 
 
@@ -33,4 +33,6 @@ func exit() -> void:
 
 
 func _get_shield() -> Node3D:
-	return player.shield_mount.get_node_or_null("Shield") as Node3D
+	if player.weapon_mount == null or player.weapon_mount.get_child_count() == 0:
+		return null
+	return player.weapon_mount.get_child(0) as Node3D

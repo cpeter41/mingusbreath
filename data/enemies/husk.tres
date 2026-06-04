@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/enemy_def.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/characters/UltimateMonsters/Big/glTF/Orc.gltf" id="2_model"]
 
 [resource]
 script = ExtResource("1")
@@ -14,3 +15,5 @@ attack_range = 1.8
 attack_cooldown = 2.0
 flee_hp_ratio = 0.2
 loot_drops = [&"scrap"]
+character_scene = ExtResource("2_model")
+anim_overrides = {}

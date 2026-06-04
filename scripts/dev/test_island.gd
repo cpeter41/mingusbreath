@@ -3,7 +3,7 @@ extends Node3D
 
 const PlayerScene := preload("res://scenes/player/Player.tscn")
 const DummyScene  := preload("res://scenes/enemies/TargetDummy.tscn")
-const HuskScene   := preload("res://scenes/enemies/Husk.tscn")
+const EnemyScene  := preload("res://scenes/enemies/Enemy.tscn")
 const HUDScript   := preload("res://scripts/ui/hud.gd")
 const BoatScene   := preload("res://scenes/ships/Boat.tscn")
 
@@ -40,7 +40,8 @@ func _build_island() -> void:
 
 	var shore := StaticBody3D.new()
 	shore.name = "ShoreWall"
-	shore.collision_layer = CollisionLayers.SHORE_WALL  # boat-only; player mask doesn't include this bit
+	# boat-only; player mask doesn't include this bit
+	shore.collision_layer = CollisionLayers.SHORE_WALL
 	shore.collision_mask = 0
 	var shore_col := CollisionShape3D.new()
 	shore_col.shape = data["shore_wall"]
@@ -100,9 +101,11 @@ func _spawn_husks() -> void:
 		Vector2( 8.0,  0.0),
 		Vector2(-8.0,  0.0),
 	]
+	var husk_def := EnemyRegistry.resolve(&"husk")
 	for xz in xz_offsets:
 		var h := _sample_terrain(xz.x, xz.y)
-		var husk := HuskScene.instantiate()
+		var husk := EnemyScene.instantiate()
+		husk.def = husk_def
 		husk.position = Vector3(xz.x, h + 0.9, xz.y)
 		add_child(husk)
 

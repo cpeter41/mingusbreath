@@ -20,7 +20,7 @@ const ENET_MAX_CLIENTS := 4
 const WORLD_SCENE_PATH := "res://scenes/world/World.tscn"
 const PLAYER_SCENE_PATH := "res://scenes/player/Player.tscn"
 const LOBBY_SCENE_PATH := "res://scenes/ui/LobbyMenu.tscn"
-const HUSK_SCENE := "res://scenes/enemies/Husk.tscn"
+const ENEMY_SCENE := "res://scenes/enemies/Enemy.tscn"
 
 var mode: int = Mode.OFFLINE
 var local_peer_id := 1
@@ -71,7 +71,9 @@ func _ensure_default_slots(need_world: bool) -> void:
 		SaveSystem.set_world(worlds[0] if worlds.size() > 0 else SaveSystem.create_world("default"))
 	if ProfileSave.current_character == "":
 		var chars := ProfileSave.list_characters()
-		ProfileSave.set_character(chars[0] if chars.size() > 0 else ProfileSave.create_character("default"))
+		ProfileSave.set_character(
+			chars[0] if chars.size() > 0 else ProfileSave.create_character("default")
+		)
 
 
 func _cmdline_autostart_host() -> void:
@@ -213,7 +215,10 @@ func _start_client_enet(host_ip: String) -> void:
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_client(host_ip, ENET_PORT)
 	if err != OK:
-		push_error("[NetworkManager] ENet client create_client(%s:%d) failed: %s" % [host_ip, ENET_PORT, err])
+		push_error(
+			"[NetworkManager] ENet client create_client(%s:%d) failed: %s"
+			% [host_ip, ENET_PORT, err]
+		)
 		return
 	multiplayer.multiplayer_peer = peer
 	print("[NetworkManager] ENet client connecting to %s:%d" % [host_ip, ENET_PORT])
@@ -289,7 +294,7 @@ func get_stable_id(peer_id: int) -> String:
 ## that player's saved position by a stable name.
 func _on_connected_to_server() -> void:
 	_peer_connected = true
-	_register_character.rpc_id(1, ProfileSave.current_character)
+	_register_character.rpc_id(1, ProfileSave.current_character, ProfileSave.current_class())
 	# A mid-session joiner built its World during the auth phase, before this
 	# fired — so the _guest_world_ready RPC was deferred. Send it now.
 	if _world_built_pending:
@@ -298,13 +303,24 @@ func _on_connected_to_server() -> void:
 
 
 @rpc("any_peer", "reliable")
-func _register_character(char_name: String) -> void:
+func _register_character(char_name: String, class_id: StringName = ProfileSave.DEFAULT_CLASS_ID) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
 	if not peers.has(sender):
 		peers[sender] = {"steam_id": 0, "display_name": "Peer_%d" % sender}
 	peers[sender]["character"] = char_name
+	peers[sender]["class"] = class_id
+
+
+## Class id for a peer, resolved consistently for host and guests:
+## - host (and OFFLINE solo) reads its own ProfileSave;
+## - guests come from peers[peer_id]["class"], populated by _register_character.
+func _class_for_peer(peer_id: int) -> StringName:
+	if peer_id == multiplayer.get_unique_id():
+		return ProfileSave.current_class()
+	var rec: Dictionary = peers.get(peer_id, {})
+	return StringName(rec.get("class", ProfileSave.DEFAULT_CLASS_ID))
 
 
 func _player_node(peer_id: int) -> Node:
@@ -409,7 +425,9 @@ func _guest_world_ready() -> void:
 ## EventBus.damage_dealt on every peer (call_local covers the attacker) so
 ## HUDs / audio / VFX on all clients see the hit. Nodes are passed as paths
 ## since Node references can't cross the wire.
-func broadcast_damage(attacker: Node, target: Node, weapon_id: StringName, skill_id: StringName, amount: float) -> void:
+func broadcast_damage(
+	attacker: Node, target: Node, weapon_id: StringName, skill_id: StringName, amount: float
+) -> void:
 	var ap: NodePath = attacker.get_path() if attacker != null else NodePath()
 	var tp: NodePath = target.get_path() if target != null else NodePath()
 	if multiplayer.multiplayer_peer == null:
@@ -420,10 +438,30 @@ func broadcast_damage(attacker: Node, target: Node, weapon_id: StringName, skill
 
 
 @rpc("any_peer", "reliable", "call_local")
-func _damage_event(attacker_path: NodePath, target_path: NodePath, weapon_id: StringName, skill_id: StringName, amount: float) -> void:
+func _damage_event(
+	attacker_path: NodePath,
+	target_path: NodePath,
+	weapon_id: StringName,
+	skill_id: StringName,
+	amount: float,
+) -> void:
 	var attacker := get_node_or_null(attacker_path)
 	var target := get_node_or_null(target_path)
 	EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)
+
+
+## Debug-only: broadcast a projectile impact point to every peer so each peer's
+## F2 debug overlay (ZoneDebug) can drop a marker. Mirrors broadcast_damage.
+func broadcast_projectile_hit_debug(pos: Vector3) -> void:
+	if multiplayer.multiplayer_peer == null:
+		EventBus.projectile_hit_debug.emit(pos)
+		return
+	_projectile_hit_debug_event.rpc(pos)
+
+
+@rpc("any_peer", "reliable", "call_local")
+func _projectile_hit_debug_event(pos: Vector3) -> void:
+	EventBus.projectile_hit_debug.emit(pos)
 
 
 ## Broadcast a chat message to every connected peer. call_local so the sender
@@ -471,22 +509,26 @@ func _parried_event(attacker_path: NodePath) -> void:
 
 
 ## Host-only debug enemy batch. Bound to the F key (see _unhandled_key_input).
-## Spawns Husks in a ring near the mainland via the EnemySpawner.
-func debug_spawn_enemies(count: int = 3) -> void:
+## Spawns Husks in a ring near the mainland via the EnemySpawner. Routed
+## through MultiplayerSpawner.spawn() so the custom spawn_function on
+## EnemySpawner runs on every peer with the def_id payload.
+func debug_spawn_enemies(count: int = 3, def_id: StringName = &"husk") -> void:
 	if not multiplayer.is_server() or _world_root == null:
 		return
-	var enemies := _world_root.get_node_or_null("Enemies")
+	var spawner := _world_root.get_node_or_null("EnemySpawner") as MultiplayerSpawner
 	var mp := IslandRegistry.get_mainland_placement()
-	if enemies == null or mp == null:
+	if spawner == null or mp == null:
 		return
-	var base := enemies.get_child_count()
 	for i in count:
-		var e: Node3D = (load(HUSK_SCENE) as PackedScene).instantiate()
-		e.name = "Husk_%d" % (base + i)
+		# spawn() runs EnemySpawner._spawn_enemy on host (here) and on each
+		# client when the replication packet arrives. Name is auto-generated by
+		# MultiplayerSpawner for replication tracking — don't rename after.
+		var e: Node3D = spawner.spawn(String(def_id)) as Node3D
+		if e == null:
+			continue
 		var ang := TAU * float(i) / float(count)
 		e.position = mp.position + Vector3(cos(ang), 20.0, sin(ang)) * 12.0
-		enemies.add_child(e, true)
-	print("[NetworkManager] debug-spawned %d husks" % count)
+	print("[NetworkManager] debug-spawned %d %s" % [count, def_id])
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -555,6 +597,11 @@ func _spawn_player_for_peer(peer_id: int) -> void:
 	var mp := IslandRegistry.get_mainland_placement()
 	if mp != null:
 		p.position = mp.position + Vector3(0.0, 20.0, 0.0) + p._spawn_offset_for_peer(peer_id)
+	# Set class BEFORE add_child so the MultiplayerSpawner snapshots it into the
+	# spawn packet (class_id is marked spawn=true, mode Never in SRC_player).
+	# This avoids an RPC-vs-spawn race; every peer receives the correct class
+	# atomically with the node.
+	p.class_id = _class_for_peer(peer_id)
 	players.add_child(p, true)
 	print("[NetworkManager] spawned Player_%d" % peer_id)
 	# Restore the player's saved position from the world save, if any. Reject a

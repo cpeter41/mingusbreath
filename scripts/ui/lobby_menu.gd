@@ -29,6 +29,7 @@ extends Control
 @onready var _char_dropdown: OptionButton = $Columns/SlotsColumn/CharDropdown
 @onready var _char_name_edit: LineEdit = $Columns/SlotsColumn/CharCreate/CharNameEdit
 @onready var _char_add_btn: Button = $Columns/SlotsColumn/CharCreate/CharAddBtn
+@onready var _class_dropdown: OptionButton = $Columns/SlotsColumn/ClassDropdown
 
 
 func _ready() -> void:
@@ -43,6 +44,10 @@ func _ready() -> void:
 	_char_dropdown.item_selected.connect(_on_char_selected)
 	_world_add_btn.pressed.connect(_on_world_add)
 	_char_add_btn.pressed.connect(_on_char_add)
+	# Class dropdown is interactive only while the user is typing a new
+	# character name; otherwise it read-only-displays the selected character's
+	# locked class (class is fixed at character creation).
+	_char_name_edit.text_changed.connect(_on_char_name_edit_text_changed)
 
 	NetworkManager.mode_changed.connect(_on_mode_changed)
 	NetworkManager.peer_player_joined.connect(_on_peer_joined)
@@ -56,6 +61,7 @@ func _ready() -> void:
 
 	_refresh_world_dropdown()
 	_refresh_char_dropdown()
+	_refresh_class_dropdown()
 	_set_status("Idle")
 	_refresh_buttons()
 	_refresh_roster()
@@ -81,15 +87,43 @@ func _refresh_world_dropdown() -> void:
 func _refresh_char_dropdown() -> void:
 	_char_dropdown.clear()
 	for c in ProfileSave.list_characters():
-		_char_dropdown.add_item(c)
+		var idx := _char_dropdown.item_count
+		_char_dropdown.add_item(_char_label(c))
+		# Slot name in metadata — the displayed text now includes the class
+		# in parens and is not the slot identifier on disk.
+		_char_dropdown.set_item_metadata(idx, c)
 	if _char_dropdown.item_count > 0:
 		if ProfileSave.current_character == "":
 			_char_dropdown.select(0)
-			ProfileSave.set_character(_char_dropdown.get_item_text(0))
+			ProfileSave.set_character(_char_dropdown.get_item_metadata(0))
 		else:
-			_select_dropdown_text(_char_dropdown, ProfileSave.current_character)
+			_select_char_dropdown_slot(ProfileSave.current_character)
 	else:
 		ProfileSave.set_character("")
+
+
+# "Hero1 (Bulwark)" — class display name resolved from ClassRegistry, falls
+# back to the raw class id, then to bare slot name if even that's missing.
+func _char_label(slot_name: String) -> String:
+	var cid := ProfileSave.get_character_class(slot_name)
+	var def := ClassRegistry.get_class_def(cid)
+	var class_label: String = ""
+	if def != null and def.display_name != "":
+		class_label = def.display_name
+	elif cid != &"":
+		class_label = String(cid)
+	if class_label == "":
+		return slot_name
+	return "%s (%s)" % [slot_name, class_label]
+
+
+func _select_char_dropdown_slot(slot_name: String) -> void:
+	for i in _char_dropdown.item_count:
+		if _char_dropdown.get_item_metadata(i) == slot_name:
+			_char_dropdown.select(i)
+			return
+	if _char_dropdown.item_count > 0:
+		_char_dropdown.select(0)
 
 
 func _select_dropdown_text(dd: OptionButton, text: String) -> void:
@@ -109,9 +143,44 @@ func _on_world_selected(idx: int) -> void:
 
 
 func _on_char_selected(idx: int) -> void:
-	ProfileSave.set_character(_char_dropdown.get_item_text(idx))
+	# Read the slot name from metadata — the displayed text is decorated.
+	ProfileSave.set_character(_char_dropdown.get_item_metadata(idx))
+	_sync_class_dropdown_state()   # reflect the new character's locked class
 	_refresh_buttons()
 	_refresh_roster()
+
+
+func _on_char_name_edit_text_changed(_text: String) -> void:
+	_sync_class_dropdown_state()
+
+
+# ── Class dropdown ───────────────────────────────────────────────
+# Class is fixed at character creation. The dropdown serves the *next-created*
+# character (only used by _on_char_add); for an existing selected character it
+# shows that character's locked class read-only.
+
+func _refresh_class_dropdown() -> void:
+	_class_dropdown.clear()
+	for cid in ClassRegistry.class_ids():
+		var def := ClassRegistry.get_class_def(cid)
+		var label: String = def.display_name if def != null and def.display_name != "" else String(cid)
+		var idx := _class_dropdown.item_count
+		_class_dropdown.add_item(label)
+		_class_dropdown.set_item_metadata(idx, cid)
+	_sync_class_dropdown_state()
+
+
+# Enabled while typing a new character name; otherwise shows the selected
+# character's locked class, read-only. Also locks once a session starts.
+func _sync_class_dropdown_state() -> void:
+	var creating := _char_name_edit.text.strip_edges() != ""
+	if not creating and ProfileSave.current_character != "":
+		var cur := ProfileSave.current_class()
+		for i in _class_dropdown.item_count:
+			if _class_dropdown.get_item_metadata(i) == cur:
+				_class_dropdown.select(i)
+				break
+	_class_dropdown.disabled = (not creating) or (not NetworkManager.is_offline())
 
 
 func _on_world_add() -> void:
@@ -132,11 +201,19 @@ func _on_char_add() -> void:
 	var base := _char_name_edit.text.strip_edges()
 	if base == "":
 		return
+	# Read the chosen class BEFORE clearing the field — the dropdown will snap
+	# back to the new character's locked class on _sync_class_dropdown_state.
+	var chosen_class: StringName = &""
+	if _class_dropdown.selected >= 0:
+		chosen_class = _class_dropdown.get_item_metadata(_class_dropdown.selected)
 	var created := ProfileSave.create_character(base)
+	if chosen_class != &"":
+		ProfileSave.set_character_class(created, chosen_class)
 	_char_name_edit.text = ""
 	_refresh_char_dropdown()
-	_select_dropdown_text(_char_dropdown, created)
+	_select_char_dropdown_slot(created)
 	ProfileSave.set_character(created)
+	_sync_class_dropdown_state()
 	_set_status("Created character '%s'" % created)
 	_refresh_buttons()
 	_refresh_roster()
@@ -218,13 +295,20 @@ func _refresh_buttons() -> void:
 	_char_dropdown.disabled = connected
 	_world_add_btn.disabled = connected
 	_char_add_btn.disabled = connected
+	_sync_class_dropdown_state()   # also session-locks the class dropdown
 
 
 func _refresh_roster() -> void:
 	var lines: PackedStringArray = []
 	lines.append("Mode: %s" % NetworkManager.Mode.keys()[NetworkManager.mode])
-	lines.append("World: %s" % (SaveSystem.current_world if SaveSystem.current_world != "" else "<none>"))
-	lines.append("Character: %s" % (ProfileSave.current_character if ProfileSave.current_character != "" else "<none>"))
+	var world := (
+		SaveSystem.current_world if SaveSystem.current_world != "" else "<none>"
+	)
+	lines.append("World: %s" % world)
+	var character := (
+		ProfileSave.current_character if ProfileSave.current_character != "" else "<none>"
+	)
+	lines.append("Character: %s" % character)
 	if SteamLobby.available and SteamLobby.lobby_id != 0:
 		lines.append("Steam lobby: %d" % SteamLobby.lobby_id)
 	lines.append("Peers (%d):" % NetworkManager.peers.size())

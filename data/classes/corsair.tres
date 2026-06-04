@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassDef" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/class_def.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/RogueDagger.tscn" id="2_weapon"]
+[ext_resource type="Script" path="res://scripts/player/action_states/melee_attack.gd" id="3_atk"]
+[ext_resource type="PackedScene" path="res://assets/characters/rpg_characters/glTF/Rogue.gltf" id="4_model"]
+
+[resource]
+script = ExtResource("1")
+id = &"corsair"
+display_name = "Corsair"
+description = "Swift sea-raider. Strikes fast with a rogue's dagger."
+max_hp = 100.0
+max_stamina = 150.0
+move_speed = 5.0
+starting_inventory = Array[Resource]([])
+weapon_scene = ExtResource("2_weapon")
+attack_state_script = ExtResource("3_atk")
+character_scene = ExtResource("4_model")
+anim_overrides = {
+&"attack": &"Dagger_Attack"
+}

@@ -1,9 +1,10 @@
 extends EnemyMovementState
 
-var _target: Vector3 = Vector3.ZERO
-var _has_target: bool = false
 const WANDER_RADIUS := 10.0
 const ARRIVE_THRESHOLD := 1.0
+
+var _target: Vector3 = Vector3.ZERO
+var _has_target: bool = false
 
 func enter() -> void:
 	_pick_target()

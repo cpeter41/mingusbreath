@@ -5,6 +5,9 @@
 # Imported assets cache
 .import/
 
+# Test run artifacts (GdUnit4 reports)
+tests/.results/
+
 # Exports
 /build/
 /export/
@@ -19,10 +22,19 @@ desktop.ini
 *.swp
 .vscode/
 .idea/
+*.blend1
+
+# Blender auto-backups
+*.blend1
+*.blend2
+
+# Claude Code — local per-user config
+.claude/settings.local.json
 
 
 NVIDIA Corporation
 
 # Plugins — install separately per environment. GodotSteam from godotsteam.com.
+# gdUnit4 (test framework) — install via tests/install_gdunit4.ps1.
 addons/
 steam_appid.txt

@@ -5,13 +5,14 @@ extends CharacterBody3D
 # on the owner. Camera/input attach only on the owning peer.
 
 const MOUSE_SENSITIVITY := 0.003
-const SWORD_SCENE   := preload("res://scenes/weapons/Sword.tscn")
-const SHIELD_SCENE  := preload("res://scenes/weapons/Shield.tscn")
 const RESPAWN_FALLBACK_Y := 15.0
 const BOAT_SPAWN_DIST := 8.0
+const SPAWN_RING_RADIUS := 3.0
+const SPAWN_SLOTS := 4
 
 @export var max_hp: float      = 100.0
 @export var max_stamina: float = 150.0
+@export var speed: float       = 5.0
 
 # Replicated via MultiplayerSynchronizer. Setters re-emit EventBus signals
 # only on the owning peer so each peer's HUD reads its own local player.
@@ -29,22 +30,43 @@ var on_boat: bool      = false
 var is_blocking: bool  = false
 var is_parrying: bool  = false
 
-# Replicated visual flags. Owner sets these from inventory contents; all peers
-# spawn/free the Sword/Shield mount nodes based on flag transitions. Inventory
-# contents themselves are not replicated — only the visible loadout state is.
-var has_sword: bool = false:
+# Replicated movement-anim state name (owner authority). Owner's MovementSM
+# writes this on every transition; the setter fires the matching clip on every
+# peer so remote ghosts animate in lockstep with the owner. Stored as the
+# lowercase movement state name ("idle", "run", "sprint", "jump", "fall", "swim").
+#
+# Defaults match the Monk rig's clip names. Each class can override via its
+# ClassDef.anim_overrides dictionary (merged in _apply_character_model) — for
+# example Rogue uses "Dagger_Attack" instead of "Attack". Stored as a var, not
+# a const, so the merge can mutate it per-instance.
+var anim_for_state: Dictionary = {
+	&"idle":   &"Idle",
+	&"run":    &"Walk",
+	&"sprint": &"Run",
+	&"jump":   &"Idle",
+	&"fall":   &"Idle",
+	&"swim":   &"Idle",
+	# Action-state clips. The attack/dodge action-states push these onto
+	# anim_state; they take priority over locomotion for their duration
+	# (see MovementSM._push_anim).
+	&"attack": &"Attack",
+	&"dodge":  &"Roll",
+}
+var anim_state: StringName = &"idle":
 	set(v):
-		has_sword = v
-		_update_sword_visual()
-var has_shield: bool = false:
-	set(v):
-		var was := has_shield
-		has_shield = v
-		_update_shield_visual()
-		if not v and was and is_inside_tree() and is_multiplayer_authority() and is_blocking and actionSM != null:
-			actionSM.transition_to("idle")
+		anim_state = v
+		_play_anim(v)
 
-@export var speed: float = 5.0
+# Replicated via the spawn packet (SRC_player properties/8, spawn=true, mode
+# Never). Host sets this before add_child in NetworkManager._spawn_player_for_peer
+# so every peer receives the correct class atomically with the node. The setter
+# applies stats from ClassDef — safe to fire before _ready since it touches
+# only plain fields, no @onready node access.
+var class_id: StringName = ProfileSave.DEFAULT_CLASS_ID:
+	set(v):
+		class_id = v
+		_apply_class()
+
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 # Owning peer id, parsed from the node name in _enter_tree. Equals
@@ -64,9 +86,50 @@ var _saved_col_mask: int = 0
 @onready var movementSM: Node      = $MovementStateMachine
 @onready var actionSM: Node        = $ActionStateMachine
 @onready var inventory: Inventory  = $Inventory
-@onready var weapon_mount: Node3D  = $WeaponMount
-@onready var shield_mount: Node3D  = $ShieldMount
+@onready var model_root: Node3D    = $Model
 @onready var hurtbox: Area3D       = $Hurtbox
+# Both populated by _apply_character_model() at spawn — they live inside the
+# class's character_scene (varies per class) so they can't be @onready paths.
+var weapon_mount: BoneAttachment3D = null
+var anim_player: AnimationPlayer = null
+
+
+## Applies stats from the resolved ClassDef. Touches only plain fields so it's
+## safe to call from the class_id setter (which may fire before _ready, before
+## @onready vars are resolved). Idempotent.
+func _apply_class() -> void:
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null:
+		return
+	max_hp = cdef.max_hp
+	max_stamina = cdef.max_stamina
+	speed = cdef.move_speed
+
+
+## Grants the class's starting items, mirroring the old hardcoded sword+shield
+## block: per-item count_of==0 guard, so a returning character (inventory
+## already restored by ProfileSave.load_or_init()) is not double-granted.
+## Authority-only — call site lives inside _on_world_loaded's is_authority branch.
+func _apply_starting_inventory() -> void:
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null:
+		return
+	for entry in cdef.starting_inventory:
+		if entry == null:
+			continue
+		var item_id: StringName = entry.item_id
+		if item_id == &"":
+			continue
+		if inventory.count_of(item_id) == 0:
+			inventory.add(item_id, entry.count)
+
+
+func _play_anim(state: StringName) -> void:
+	if anim_player == null:
+		return
+	var clip: StringName = anim_for_state.get(state, &"Idle")
+	if anim_player.has_animation(String(clip)) and anim_player.current_animation != String(clip):
+		anim_player.play(clip)
 
 
 ## Authority is encoded in the node name "Player_<peer_id>" by NetworkManager.
@@ -86,10 +149,25 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	# Apply class first so max_hp / max_stamina / speed reflect the class def
+	# before hp / stamina latch onto them. Idempotent — also runs from the
+	# class_id setter on guests when the spawn packet arrives.
+	_apply_class()
+	# Visual + combat side: needs @onready vars resolved, so it runs here in
+	# _ready rather than from the class_id setter. Runs on every peer so remote
+	# ghosts show the correct character / weapon / attack state.
+	# Order matters: character must mount first to create the WeaponMount bone
+	# attachment + locate the AnimationPlayer that the weapon and anim setter
+	# depend on.
+	_apply_character_model()
+	_mount_class_weapon()
+	_apply_attack_state()
 	hp = max_hp
 	stamina = max_stamina
-	inventory.changed.connect(_on_inventory_changed)
 	EventBus.world_loaded.connect(_on_world_loaded, CONNECT_ONE_SHOT)
+	# Kick off the initial clip; setter fires for subsequent transitions and
+	# replicated syncs, but the default value never triggers it.
+	_play_anim(anim_state)
 
 	# Only the owning peer drives input, camera, and physics for this player.
 	# Non-owner peers see a replicated ghost driven by the MultiplayerSynchronizer.
@@ -114,33 +192,129 @@ func _ready() -> void:
 	ProfileSave.register(inventory, "Inventory")
 
 
-func _on_inventory_changed() -> void:
-	# Owner's inventory is the source of truth. Update the replicated visual
-	# flags; setters spawn/free the mount nodes on every peer.
-	if not is_multiplayer_authority():
+## Instantiates the class's character_scene under model_root. Locates the
+## Skeleton3D + AnimationPlayer inside it, creates a "Weapon.R" BoneAttachment3D
+## for the weapon mount, and merges the class's anim_overrides into
+## anim_for_state. Runs on every peer so remote ghosts render the correct body.
+func _apply_character_model() -> void:
+	if model_root == null:
 		return
-	has_sword = inventory.count_of(&"sword") > 0
-	has_shield = inventory.count_of(&"shield") > 0
-
-
-func _update_sword_visual() -> void:
-	if not is_inside_tree() or weapon_mount == null:
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null or cdef.character_scene == null:
 		return
-	var existing := weapon_mount.get_node_or_null("Sword")
-	if has_sword and existing == null:
-		weapon_mount.add_child(SWORD_SCENE.instantiate())
-	elif not has_sword and existing != null:
-		existing.queue_free()
+	# Clear any prior character (idempotent on respawn / class swap).
+	for child in model_root.get_children():
+		child.queue_free()
+	var character: Node = cdef.character_scene.instantiate()
+	character.name = "Character"
+	model_root.add_child(character)
+	var skel := _find_node_by_class(character, "Skeleton3D") as Skeleton3D
+	anim_player = _find_node_by_class(character, "AnimationPlayer") as AnimationPlayer
+	if skel != null:
+		weapon_mount = BoneAttachment3D.new()
+		weapon_mount.name = "WeaponMount"
+		weapon_mount.bone_name = "Weapon.R"
+		skel.add_child(weapon_mount)
+	for k in cdef.anim_overrides:
+		anim_for_state[k] = cdef.anim_overrides[k]
+	_apply_anim_loops()
 
 
-func _update_shield_visual() -> void:
-	if not is_inside_tree() or shield_mount == null:
+# State names whose clips should loop. Action clips (attack/dodge) and one-shot
+# locomotion (jump/fall) play through once. Looping is forced at runtime because
+# the gltf imports default loop_mode to LOOP_NONE per clip.
+const LOOPING_STATES: Array[StringName] = [&"idle", &"run", &"sprint", &"swim"]
+
+func _apply_anim_loops() -> void:
+	if anim_player == null:
 		return
-	var existing := shield_mount.get_node_or_null("Shield")
-	if has_shield and existing == null:
-		shield_mount.add_child(SHIELD_SCENE.instantiate())
-	elif not has_shield and existing != null:
-		existing.queue_free()
+	for state in LOOPING_STATES:
+		var clip_name: String = String(anim_for_state.get(state, &""))
+		if clip_name == "" or not anim_player.has_animation(clip_name):
+			continue
+		var anim := anim_player.get_animation(clip_name)
+		if anim != null:
+			anim.loop_mode = Animation.LOOP_LINEAR
+
+
+func _find_node_by_class(root: Node, type_name: String) -> Node:
+	if root.get_class() == type_name:
+		return root
+	for child in root.get_children():
+		var found := _find_node_by_class(child, type_name)
+		if found != null:
+			return found
+	return null
+
+
+## Instantiates the class's weapon scene under weapon_mount. Idempotent (skips
+## if a weapon is already mounted, so respawn / re-entry leaves it in place).
+## Sets the weapon root's owner to self so the hitbox can read its attacker via
+## get_parent().owner (see scripts/combat/hitbox.gd).
+func _mount_class_weapon() -> void:
+	if weapon_mount == null:
+		return
+	if weapon_mount.get_child_count() > 0:
+		return
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null or cdef.weapon_scene == null:
+		return
+	var w: Node = cdef.weapon_scene.instantiate()
+	weapon_mount.add_child(w)
+	w.owner = self
+
+
+## Swaps the Attack action-state node's script to the class's attack_state_script.
+## ActionSM._ready caches the node by identity, so changing only the script
+## (not the node) keeps the cache valid. No-op if the script already matches.
+func _apply_attack_state() -> void:
+	var cdef := ClassRegistry.resolve(class_id)
+	if cdef == null or cdef.attack_state_script == null:
+		return
+	if actionSM == null:
+		return
+	var atk: Node = actionSM.get_node_or_null("Attack")
+	if atk == null:
+		return
+	if atk.get_script() != cdef.attack_state_script:
+		atk.set_script(cdef.attack_state_script)
+		# set_script reinitializes the node's vars to script defaults, wiping
+		# the ActionState.player / actionSM refs that ActionSM._ready assigned.
+		# Re-bind them here so the new script can reach the player on enter().
+		atk.player = self
+		atk.actionSM = actionSM
+
+
+func has_weapon() -> bool:
+	return weapon_mount != null and weapon_mount.get_child_count() > 0
+
+
+func has_block_weapon() -> bool:
+	if not has_weapon():
+		return false
+	var w: Node = weapon_mount.get_child(0)
+	return w != null and w.has_method("raise")
+
+
+const AIM_RANGE := 200.0
+
+## World point the player is currently aiming at — camera origin + forward,
+## clipped to the first world/enemy surface hit. Excludes this player's own
+## bodies. Used by ranged weapons to derive flight direction from crosshair
+## aim rather than the weapon's local axis.
+func aim_target() -> Vector3:
+	var cam := camera_pivot.get_node_or_null("SpringArm3D/Camera3D") as Camera3D
+	if cam == null:
+		return global_position + Vector3.FORWARD * AIM_RANGE
+	var origin := cam.global_position
+	var forward := -cam.global_transform.basis.z.normalized()
+	var end := origin + forward * AIM_RANGE
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(origin, end)
+	q.collision_mask = CollisionLayers.WORLD | CollisionLayers.HURTBOX
+	q.exclude = [self.get_rid(), hurtbox.get_rid()]
+	var hit := space.intersect_ray(q)
+	return hit["position"] if not hit.is_empty() else end
 
 
 ## Awards an item to this player. Runs on the owning peer's authority — the
@@ -328,19 +502,13 @@ func _on_interact_pressed() -> void:
 		nearest.request_mount.rpc_id(1, my_id)
 
 
-const SPAWN_RING_RADIUS := 3.0
-const SPAWN_SLOTS := 4
-
-
 func _on_world_loaded() -> void:
 	if not is_multiplayer_authority():
 		_world_ready = true
 		return
-	# Grant starter loadout once. Idempotent so it survives save/load round-trips.
-	if inventory.count_of(&"sword") == 0:
-		inventory.add(&"sword", 1)
-	if inventory.count_of(&"shield") == 0:
-		inventory.add(&"shield", 1)
+	# Grant the class's starting loadout once. Idempotent (per-item count_of
+	# guard) so it survives save/load round-trips.
+	_apply_starting_inventory()
 
 	# Saved position from the profile wins; otherwise spawn at the mainland
 	# anchor offset to this peer's spawn slot.

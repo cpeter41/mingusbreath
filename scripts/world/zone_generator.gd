@@ -106,7 +106,10 @@ static func _build_hard(
 			placed_anchor = true
 			break
 		if not placed_anchor:
-			push_warning("ZoneGenerator: hard anchor placement gave up after %d attempts" % MAX_SAMPLE_ATTEMPTS)
+			push_warning(
+				"ZoneGenerator: hard anchor placement gave up after %d attempts"
+				% MAX_SAMPLE_ATTEMPTS
+			)
 	return z
 
 
@@ -143,7 +146,10 @@ static func _build_medium(
 			placed_anchor = true
 			break
 		if not placed_anchor:
-			push_warning("ZoneGenerator: medium anchor placement gave up after %d attempts" % MAX_SAMPLE_ATTEMPTS)
+			push_warning(
+				"ZoneGenerator: medium anchor placement gave up after %d attempts"
+				% MAX_SAMPLE_ATTEMPTS
+			)
 	return z
 
 
@@ -186,4 +192,7 @@ static func _sanity_check(zones: Array) -> void:
 					best_f = f
 					best = other
 			if best != zi:
-				push_warning("ZoneGenerator: anchor %s of zone diff=%d classifies to diff=%d" % [p, zi.def.difficulty, best.def.difficulty])
+				push_warning(
+					"ZoneGenerator: anchor %s of zone diff=%d classifies to diff=%d"
+					% [p, zi.def.difficulty, best.def.difficulty]
+				)

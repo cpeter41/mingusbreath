@@ -1,4 +1,5 @@
-## Autoload name kept for back-compat. Internals are island-streaming, not chunk-grid streaming. See Phase 5 plan.
+## Autoload name kept for back-compat. Internals are island-streaming,
+## not chunk-grid streaming. See Phase 5 plan.
 ##
 ## Three-tier streaming:
 ##   Far  — terrain mesh + collider. Loaded once per placement, never unloaded.

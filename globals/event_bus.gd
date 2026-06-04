@@ -8,7 +8,9 @@ signal skill_leveled(skill_id: StringName, new_level: int)
 signal station_discovered(station_id: StringName)
 signal boss_defeated(boss_id: StringName)
 signal time_phase_changed(phase: int)
-signal damage_dealt(attacker: Node, target: Node, weapon_id: StringName, skill_id: StringName, amount: float)
+signal damage_dealt(
+	attacker: Node, target: Node, weapon_id: StringName, skill_id: StringName, amount: float
+)
 signal player_hp_changed(hp: float, max_hp: float)
 signal player_stamina_changed(stamina: float, max_stamina: float)
 signal player_died()
@@ -23,3 +25,6 @@ signal biome_entered(biome: BiomeDef)
 signal chat_message_received(sender: String, text: String)
 # "/" prefix messages — emitted locally only; wired up by future command handler.
 signal chat_command_entered(text: String)
+# Debug-only: emitted on every peer when a projectile hits something. Listeners
+# (ZoneDebug) gate their response on ZoneMap.debug_visible.
+signal projectile_hit_debug(world_position: Vector3)

@@ -116,6 +116,13 @@ text = "Character"
 [node name="CharDropdown" type="OptionButton" parent="Columns/SlotsColumn" unique_id=1864733075]
 layout_mode = 2
 
+[node name="ClassLabel" type="Label" parent="Columns/SlotsColumn" unique_id=3001011001]
+layout_mode = 2
+text = "Class (new character)"
+
+[node name="ClassDropdown" type="OptionButton" parent="Columns/SlotsColumn" unique_id=3001011002]
+layout_mode = 2
+
 [node name="CharCreate" type="HBoxContainer" parent="Columns/SlotsColumn" unique_id=1780735533]
 layout_mode = 2
 theme_override_constants/separation = 4
