@@ -95,9 +95,17 @@ func save() -> bool:
 		"header": {"version": SCHEMA_VERSION, "seed": GameState.world_seed},
 		"payload": payload,
 	}
+	return _write_save_blob(blob)
+
+
+## Atomic write: store the blob to a temp file, then rename it over the slot.
+func _write_save_blob(blob: Dictionary) -> bool:
 	var f := FileAccess.open(_temp_path(), FileAccess.WRITE)
 	if f == null:
-		push_error("SaveSystem: failed to open %s for write (err=%d)" % [_temp_path(), FileAccess.get_open_error()])
+		push_error(
+			"SaveSystem: failed to open %s for write (err=%d)"
+			% [_temp_path(), FileAccess.get_open_error()]
+		)
 		return false
 	f.store_var(blob)
 	f.flush()
@@ -129,27 +137,30 @@ func load_or_init() -> void:
 	for i in range(_saveables.size() - 1, -1, -1):
 		if not is_instance_valid(_saveables[i]):
 			_saveables.remove_at(i)
+	_load_world_state()
+
+
+## Reads the active world slot and applies it to registered saveables.
+## Falls back to defaults on a missing / empty / stale-version file.
+func _load_world_state() -> void:
 	if current_world == "":
 		push_warning("SaveSystem: load_or_init() with no world selected — defaults")
-		for n in _saveables:
-			if n.has_method("load_data"):
-				n.load_data({})
+		_load_all_defaults()
 		return
 	if not FileAccess.file_exists(_save_path()):
-		for n in _saveables:
-			if n.has_method("load_data"):
-				n.load_data({})
+		_load_all_defaults()
 		return
 	var f := FileAccess.open(_save_path(), FileAccess.READ)
 	if f == null:
-		push_error("SaveSystem: failed to open %s for read (err=%d)" % [_save_path(), FileAccess.get_open_error()])
+		push_error(
+			"SaveSystem: failed to open %s for read (err=%d)"
+			% [_save_path(), FileAccess.get_open_error()]
+		)
 		return
 	if f.get_length() == 0:
 		push_warning("SaveSystem: %s is empty, starting with defaults" % _save_path())
 		f.close()
-		for n in _saveables:
-			if n.has_method("load_data"):
-				n.load_data({})
+		_load_all_defaults()
 		return
 	var blob = f.get_var()
 	f.close()
@@ -159,17 +170,25 @@ func load_or_init() -> void:
 	var header: Dictionary = blob["header"]
 	var version := int(header.get("version", 0))
 	if version != SCHEMA_VERSION:
-		push_warning("SaveSystem: save version %d != %d, wiping for cold start" % [version, SCHEMA_VERSION])
+		push_warning(
+			"SaveSystem: save version %d != %d, wiping for cold start"
+			% [version, SCHEMA_VERSION]
+		)
 		delete_save()
-		for n in _saveables:
-			if n.has_method("load_data"):
-				n.load_data({})
+		_load_all_defaults()
 		return
 	var payload: Dictionary = blob["payload"]
 	payload = _migrate(payload, version)
 	for n in _saveables:
 		if n.has_method("load_data") and payload.has(n.name):
 			n.load_data(payload[n.name])
+
+
+## Calls load_data({}) on every registered saveable that supports it.
+func _load_all_defaults() -> void:
+	for n in _saveables:
+		if n.has_method("load_data"):
+			n.load_data({})
 
 
 func delete_save() -> void:
@@ -188,7 +207,10 @@ func delete_save() -> void:
 
 func _migrate(payload: Dictionary, from_version: int) -> Dictionary:
 	if from_version > SCHEMA_VERSION:
-		push_warning("SaveSystem: save is from a newer version (%d > %d); attempting to load anyway" % [from_version, SCHEMA_VERSION])
+		push_warning(
+			"SaveSystem: save is from a newer version (%d > %d); attempting to load anyway"
+			% [from_version, SCHEMA_VERSION]
+		)
 	if from_version < 2:
 		if not payload.has("IslandDeltaStore"):
 			payload["IslandDeltaStore"] = {}

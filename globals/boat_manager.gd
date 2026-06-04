@@ -4,7 +4,8 @@ extends Node
 # boat there replicates it to every peer.
 
 const BOAT_SCENE := preload("res://scenes/ships/Boat.tscn")
-# Must match BoatSpawner.spawn_limit in World.tscn; exceeding it silently drops replication on clients.
+# Must match BoatSpawner.spawn_limit in World.tscn; exceeding it silently
+# drops replication on clients.
 const BOAT_SPAWN_LIMIT := 8
 
 var _boats: Array[Boat] = []
@@ -61,7 +62,13 @@ func _boats_container() -> Node:
 	return scene.get_node_or_null("Boats")
 
 
-func _spawn_boat(pos: Vector3, rot_y: float, lin_vel: Vector3, ang_vel: Vector3, owner_peer_id: int = 0) -> Boat:
+func _spawn_boat(
+	pos: Vector3,
+	rot_y: float,
+	lin_vel: Vector3,
+	ang_vel: Vector3,
+	owner_peer_id: int = 0,
+) -> Boat:
 	var boats := _boats_container()
 	if boats == null:
 		push_warning("[BoatManager] /World/Boats container missing")

@@ -71,7 +71,9 @@ func _ensure_default_slots(need_world: bool) -> void:
 		SaveSystem.set_world(worlds[0] if worlds.size() > 0 else SaveSystem.create_world("default"))
 	if ProfileSave.current_character == "":
 		var chars := ProfileSave.list_characters()
-		ProfileSave.set_character(chars[0] if chars.size() > 0 else ProfileSave.create_character("default"))
+		ProfileSave.set_character(
+			chars[0] if chars.size() > 0 else ProfileSave.create_character("default")
+		)
 
 
 func _cmdline_autostart_host() -> void:
@@ -213,7 +215,10 @@ func _start_client_enet(host_ip: String) -> void:
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_client(host_ip, ENET_PORT)
 	if err != OK:
-		push_error("[NetworkManager] ENet client create_client(%s:%d) failed: %s" % [host_ip, ENET_PORT, err])
+		push_error(
+			"[NetworkManager] ENet client create_client(%s:%d) failed: %s"
+			% [host_ip, ENET_PORT, err]
+		)
 		return
 	multiplayer.multiplayer_peer = peer
 	print("[NetworkManager] ENet client connecting to %s:%d" % [host_ip, ENET_PORT])
@@ -420,7 +425,9 @@ func _guest_world_ready() -> void:
 ## EventBus.damage_dealt on every peer (call_local covers the attacker) so
 ## HUDs / audio / VFX on all clients see the hit. Nodes are passed as paths
 ## since Node references can't cross the wire.
-func broadcast_damage(attacker: Node, target: Node, weapon_id: StringName, skill_id: StringName, amount: float) -> void:
+func broadcast_damage(
+	attacker: Node, target: Node, weapon_id: StringName, skill_id: StringName, amount: float
+) -> void:
 	var ap: NodePath = attacker.get_path() if attacker != null else NodePath()
 	var tp: NodePath = target.get_path() if target != null else NodePath()
 	if multiplayer.multiplayer_peer == null:
@@ -431,7 +438,13 @@ func broadcast_damage(attacker: Node, target: Node, weapon_id: StringName, skill
 
 
 @rpc("any_peer", "reliable", "call_local")
-func _damage_event(attacker_path: NodePath, target_path: NodePath, weapon_id: StringName, skill_id: StringName, amount: float) -> void:
+func _damage_event(
+	attacker_path: NodePath,
+	target_path: NodePath,
+	weapon_id: StringName,
+	skill_id: StringName,
+	amount: float,
+) -> void:
 	var attacker := get_node_or_null(attacker_path)
 	var target := get_node_or_null(target_path)
 	EventBus.damage_dealt.emit(attacker, target, weapon_id, skill_id, amount)

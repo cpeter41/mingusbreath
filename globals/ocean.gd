@@ -2,7 +2,8 @@ extends Node
 
 const WATER_BASE_Y := -0.15
 const GRAVITY      := 9.81
-# 2^14 — keeps shader-side float32 phase precision sub-millirad; see plan for wrap-discontinuity notes.
+# 2^14 — keeps shader-side float32 phase precision sub-millirad;
+# see plan for wrap-discontinuity notes.
 const TIME_MOD     := 16384.0
 const STEEPNESS    := 0.30
 const WAVES: Array[Vector4] = [

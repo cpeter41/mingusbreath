@@ -1,19 +1,18 @@
 extends Node
 
+enum Phase { DAWN, DAY, DUSK, NIGHT }
+
 const MINUTES_PER_DAY := 1440.0
 const TIME_ACCEL_MULT := 40.0
-
-enum Phase { DAWN, DAY, DUSK, NIGHT }
+const ACCEL_BROADCAST_INTERVAL := 1.0   # while T held, host re-broadcasts every 1s
+# Periodic re-anchor so guests don't drift if T is never pressed in a long session.
+const PERIODIC_SYNC_INTERVAL    := 30.0
 
 @export var minutes_per_real_second: float = 1.0
 
 @export var tint_day:   Color = Color(1.0,  1.00, 0.95)
 @export var tint_dusk:  Color = Color(0.90, 0.50, 0.30)
 @export var tint_night: Color = Color(0.15, 0.18, 0.30)
-
-const ACCEL_BROADCAST_INTERVAL := 1.0   # while T held, host re-broadcasts every 1s
-# Periodic re-anchor so guests don't drift if T is never pressed in a long session.
-const PERIODIC_SYNC_INTERVAL    := 30.0
 
 var game_minutes: float = 0.0
 var phase: Phase = Phase.DAY

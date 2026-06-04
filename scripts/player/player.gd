@@ -7,9 +7,12 @@ extends CharacterBody3D
 const MOUSE_SENSITIVITY := 0.003
 const RESPAWN_FALLBACK_Y := 15.0
 const BOAT_SPAWN_DIST := 8.0
+const SPAWN_RING_RADIUS := 3.0
+const SPAWN_SLOTS := 4
 
 @export var max_hp: float      = 100.0
 @export var max_stamina: float = 150.0
+@export var speed: float       = 5.0
 
 # Replicated via MultiplayerSynchronizer. Setters re-emit EventBus signals
 # only on the owning peer so each peer's HUD reads its own local player.
@@ -64,7 +67,6 @@ var class_id: StringName = ProfileSave.DEFAULT_CLASS_ID:
 		class_id = v
 		_apply_class()
 
-@export var speed: float = 5.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 # Owning peer id, parsed from the node name in _enter_tree. Equals
@@ -498,10 +500,6 @@ func _on_interact_pressed() -> void:
 			nearest = boat
 	if nearest != null:
 		nearest.request_mount.rpc_id(1, my_id)
-
-
-const SPAWN_RING_RADIUS := 3.0
-const SPAWN_SLOTS := 4
 
 
 func _on_world_loaded() -> void:

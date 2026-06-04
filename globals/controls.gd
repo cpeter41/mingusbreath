@@ -4,6 +4,17 @@
 ## touch `Input.*` or raw `KEY_*` constants.
 extends Node
 
+# ── Discrete-event signals ───────────────────────────────────────
+signal pause_pressed
+signal reset_pressed
+signal spawn_boat_pressed
+signal interact_pressed
+signal inventory_toggled
+signal map_toggled
+signal mouse_look(delta: Vector2)
+signal chat_open_pressed
+signal chat_slash_pressed
+
 # ── Action names ─────────────────────────────────────────────────
 const MOVE_FORWARD   := &"move_forward"
 const MOVE_BACK      := &"move_back"
@@ -30,17 +41,6 @@ const FIRE_CANNON    := &"fire_cannon"
 const CHAT_OPEN       := &"chat_open"
 const CHAT_OPEN_SLASH := &"chat_open_slash"
 
-# ── Discrete-event signals ───────────────────────────────────────
-signal pause_pressed
-signal reset_pressed
-signal spawn_boat_pressed
-signal interact_pressed
-signal inventory_toggled
-signal map_toggled
-signal mouse_look(delta: Vector2)
-signal chat_open_pressed
-signal chat_slash_pressed
-
 # ── Input gate ───────────────────────────────────────────────────
 ## When true, gameplay actions are suppressed (queries return neutral,
 ## gameplay discrete signals do not emit). MAP and PAUSE still fire so
@@ -51,6 +51,12 @@ var input_blocked: bool = false
 ## with the map open. Combat, mouse-look, and interactions remain blocked.
 var allow_movement_while_blocked: bool = false
 
+# Action → signal routing. `_always` fires even while input is blocked
+# (menu toggles); `_gated` is suppressed when input_blocked is true.
+# Built in _ready because signals aren't available at const-init time.
+var _always_actions: Dictionary
+var _gated_actions: Dictionary
+
 
 func _movement_gated() -> bool:
 	return input_blocked and not allow_movement_while_blocked
@@ -59,35 +65,31 @@ func _movement_gated() -> bool:
 func _ready() -> void:
 	# Keep input routing alive while the tree is paused (e.g. inventory open).
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_always_actions = {
+		PAUSE: pause_pressed,
+		MAP: map_toggled,
+	}
+	_gated_actions = {
+		RESET_SAVE: reset_pressed,
+		SPAWN_BOAT: spawn_boat_pressed,
+		INTERACT: interact_pressed,
+		INVENTORY: inventory_toggled,
+		CHAT_OPEN: chat_open_pressed,
+		CHAT_OPEN_SLASH: chat_slash_pressed,
+	}
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(PAUSE):
-		pause_pressed.emit()
-		return
-	if event.is_action_pressed(MAP):
-		map_toggled.emit()
-		return
+	for action: StringName in _always_actions:
+		if event.is_action_pressed(action):
+			_always_actions[action].emit()
+			return
 	if input_blocked:
 		return
-	if event.is_action_pressed(RESET_SAVE):
-		reset_pressed.emit()
-		return
-	if event.is_action_pressed(SPAWN_BOAT):
-		spawn_boat_pressed.emit()
-		return
-	if event.is_action_pressed(INTERACT):
-		interact_pressed.emit()
-		return
-	if event.is_action_pressed(INVENTORY):
-		inventory_toggled.emit()
-		return
-	if event.is_action_pressed(CHAT_OPEN):
-		chat_open_pressed.emit()
-		return
-	if event.is_action_pressed(CHAT_OPEN_SLASH):
-		chat_slash_pressed.emit()
-		return
+	for action: StringName in _gated_actions:
+		if event.is_action_pressed(action):
+			_gated_actions[action].emit()
+			return
 	if event is InputEventMouseMotion and is_mouse_captured():
 		mouse_look.emit((event as InputEventMouseMotion).relative)
 

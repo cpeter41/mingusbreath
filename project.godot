@@ -41,6 +41,10 @@ ProjectileManager="*res://globals/projectile_manager.gd"
 CommandRegistry="*res://scripts/commands/command_registry.gd"
 Controls="*res://globals/controls.gd"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
+
 [input]
 
 move_forward={

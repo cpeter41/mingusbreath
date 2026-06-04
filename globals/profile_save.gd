@@ -143,7 +143,10 @@ func save() -> bool:
 	var blob := {"header": {"version": SCHEMA_VERSION}, "payload": payload}
 	var f := FileAccess.open(_temp_path(), FileAccess.WRITE)
 	if f == null:
-		push_error("ProfileSave: failed to open %s for write (err=%d)" % [_temp_path(), FileAccess.get_open_error()])
+		push_error(
+			"ProfileSave: failed to open %s for write (err=%d)"
+			% [_temp_path(), FileAccess.get_open_error()]
+		)
 		return false
 	f.store_var(blob)
 	f.flush()
@@ -177,7 +180,10 @@ func load_or_init() -> void:
 		return
 	var f := FileAccess.open(_profile_path(), FileAccess.READ)
 	if f == null:
-		push_error("ProfileSave: failed to open %s for read (err=%d)" % [_profile_path(), FileAccess.get_open_error()])
+		push_error(
+			"ProfileSave: failed to open %s for read (err=%d)"
+			% [_profile_path(), FileAccess.get_open_error()]
+		)
 		return
 	if f.get_length() == 0:
 		f.close()

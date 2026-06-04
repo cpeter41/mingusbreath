@@ -301,8 +301,14 @@ func _refresh_buttons() -> void:
 func _refresh_roster() -> void:
 	var lines: PackedStringArray = []
 	lines.append("Mode: %s" % NetworkManager.Mode.keys()[NetworkManager.mode])
-	lines.append("World: %s" % (SaveSystem.current_world if SaveSystem.current_world != "" else "<none>"))
-	lines.append("Character: %s" % (ProfileSave.current_character if ProfileSave.current_character != "" else "<none>"))
+	var world := (
+		SaveSystem.current_world if SaveSystem.current_world != "" else "<none>"
+	)
+	lines.append("World: %s" % world)
+	var character := (
+		ProfileSave.current_character if ProfileSave.current_character != "" else "<none>"
+	)
+	lines.append("Character: %s" % character)
 	if SteamLobby.available and SteamLobby.lobby_id != 0:
 		lines.append("Steam lobby: %d" % SteamLobby.lobby_id)
 	lines.append("Peers (%d):" % NetworkManager.peers.size())

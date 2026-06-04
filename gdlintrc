@@ -1,0 +1,11 @@
+# gdlint config — overrides gdtoolkit defaults; unset rules keep their defaults.
+#
+# class-variable-name: widened to tolerate a trailing camelCase suffix so the
+#   deliberate design names `movementSM` / `actionSM` (the two parallel state
+#   machines, see ARCHITECTURE.md) pass. Every other var name is still linted.
+class-variable-name: '_?[a-zA-Z][a-zA-Z0-9]*(_[a-z0-9]+)*'
+#
+# load-constant-name: default allows PascalCase or SCREAMING_SNAKE but not a
+#   leading underscore on PascalCase. Widened so `_HelpCommand`-style names for
+#   preloaded command classes (a common Godot idiom) pass.
+load-constant-name: '(_?([A-Z][a-z0-9]*)+|_?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)'
